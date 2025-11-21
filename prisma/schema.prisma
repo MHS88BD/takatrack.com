@@ -1,0 +1,197 @@
+// Enhanced Prisma schema with Wallets, Category separation, and Ledger support
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password_hash String
+  role          String   @default("USER") // USER, ADMIN
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  transactionCategories TransactionCategory[]
+  assetCategories       AssetCategory[]
+  tags                  Tag[]
+  transactions          Transaction[]
+  parties               Party[]
+  loans                 Loan[]
+  assetLiabilities      AssetLiability[]
+  wallets               Wallet[]
+}
+
+// Wallet/Account System (Bank, Cash, Credit Card)
+model Wallet {
+  id           String   @id @default(uuid())
+  name         String   // e.g., "Main Bank", "Cash", "Credit Card"
+  type         String   // BANK, CASH, CREDIT_CARD
+  balance      Decimal  @default(0)
+  user_id      String
+  user         User     @relation(fields: [user_id], references: [id])
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  transactions     Transaction[]
+  loanTransactions LoanTransaction[]
+
+  @@unique([name, user_id])
+}
+
+// Transaction Categories (Income/Expense only)
+model TransactionCategory {
+  id      String @id @default(uuid())
+  name    String
+  type    String // INCOME, EXPENSE
+  user_id String
+  user    User   @relation(fields: [user_id], references: [id])
+
+  subCategories TransactionSubCategory[]
+  transactions  Transaction[]
+
+  @@unique([name, user_id, type])
+}
+
+model TransactionSubCategory {
+  id          String              @id @default(uuid())
+  name        String
+  category_id String
+  category    TransactionCategory @relation(fields: [category_id], references: [id], onDelete: Cascade)
+
+  transactions Transaction[]
+
+  @@unique([name, category_id])
+}
+
+// Asset/Liability Categories (separate from transactions)
+model AssetCategory {
+  id      String @id @default(uuid())
+  name    String
+  type    String // ASSET, LIABILITY
+  user_id String
+  user    User   @relation(fields: [user_id], references: [id])
+
+  subCategories AssetSubCategory[]
+  assets        AssetLiability[]
+
+  @@unique([name, user_id, type])
+}
+
+model AssetSubCategory {
+  id          String        @id @default(uuid())
+  name        String
+  category_id String
+  category    AssetCategory @relation(fields: [category_id], references: [id], onDelete: Cascade)
+
+  assets AssetLiability[]
+
+  @@unique([name, category_id])
+}
+
+model Tag {
+  id      String @id @default(uuid())
+  name    String
+  user_id String
+  user    User   @relation(fields: [user_id], references: [id])
+
+  transactions     Transaction[]
+  assetLiabilities AssetLiability[]
+
+  @@unique([name, user_id])
+}
+
+// Enhanced Transaction with Wallet
+model Transaction {
+  id              String                  @id @default(uuid())
+  amount          Decimal
+  date            DateTime
+  description     String?
+  type            String                  // INCOME, EXPENSE
+  category_id     String
+  category        TransactionCategory     @relation(fields: [category_id], references: [id])
+  sub_category_id String?
+  subCategory     TransactionSubCategory? @relation(fields: [sub_category_id], references: [id])
+  wallet_id       String
+  wallet          Wallet                  @relation(fields: [wallet_id], references: [id])
+  user_id         String
+  user            User                    @relation(fields: [user_id], references: [id])
+  created_at      DateTime                @default(now())
+  updated_at      DateTime                @updatedAt
+
+  tags Tag[]
+}
+
+model Party {
+  id      String  @id @default(uuid())
+  name    String
+  phone   String
+  email   String
+  address String?
+  user_id String
+  user    User    @relation(fields: [user_id], references: [id])
+
+  loans            Loan[]
+  loanTransactions LoanTransaction[]
+
+  @@unique([name, user_id])
+  @@unique([phone, user_id])
+  @@unique([email, user_id])
+}
+
+// Enhanced Loan with transactions
+model Loan {
+  id         String   @id @default(uuid())
+  type       String   // LENT, BORROWED
+  amount     Decimal
+  date       DateTime
+  status     String   @default("ACTIVE") // ACTIVE, PAID
+  party_id   String
+  party      Party    @relation(fields: [party_id], references: [id])
+  user_id    String
+  user       User     @relation(fields: [user_id], references: [id])
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  transactions LoanTransaction[]
+}
+
+// Loan Transactions (gives/receives + repayments) - affects wallet balance
+model LoanTransaction {
+  id          String   @id @default(uuid())
+  loan_id     String
+  loan        Loan     @relation(fields: [loan_id], references: [id])
+  party_id    String
+  party       Party    @relation(fields: [party_id], references: [id])
+  wallet_id   String
+  wallet      Wallet   @relation(fields: [wallet_id], references: [id])
+  amount      Decimal
+  type        String   // GIVEN, RECEIVED, REPAYMENT_GIVEN, REPAYMENT_RECEIVED
+  date        DateTime
+  description String?
+  created_at  DateTime @default(now())
+}
+
+// Enhanced Asset/Liability with proper categories
+model AssetLiability {
+  id              String            @id @default(uuid())
+  name            String
+  type            String            // ASSET, LIABILITY
+  value           Decimal
+  category_id     String
+  category        AssetCategory     @relation(fields: [category_id], references: [id])
+  sub_category_id String?
+  subCategory     AssetSubCategory? @relation(fields: [sub_category_id], references: [id])
+  user_id         String
+  user            User              @relation(fields: [user_id], references: [id])
+  created_at      DateTime          @default(now())
+  updated_at      DateTime          @updatedAt
+
+  tags Tag[]
+}
