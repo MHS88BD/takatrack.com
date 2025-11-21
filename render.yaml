@@ -1,0 +1,6 @@
+version: 2
+build:
+  env:
+    NODE_VERSION: 18
+buildCommand: npm install && npx prisma generate && npm run build
+startCommand: npx prisma migrate deploy && npm start
