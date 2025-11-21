@@ -108,14 +108,25 @@ EOF
 # Update Prisma schema to use PostgreSQL
 sed -i 's/provider = "sqlite"/provider = "postgresql"/' prisma/schema.prisma
 
+# Remove old SQLite migrations to avoid provider mismatch
+if [ -d "prisma/migrations" ]; then
+    echo -e "${YELLOW}⚠${NC}  Removing old SQLite migrations..."
+    rm -rf prisma/migrations
+fi
+
 # Install dependencies
 npm install --production=false
 
 # Generate Prisma client
 npx prisma generate
 
-# Run migrations
-npx prisma migrate deploy
+# Push schema to database (creates tables without migrations)
+echo "📝 Creating database schema..."
+npx prisma db push --accept-data-loss --skip-generate
+
+# Optional: Seed database
+echo "🌱 Seeding database..."
+npx prisma db seed 2>/dev/null || echo "No seed file or seeding skipped"
 
 # Build backend
 npm run build
