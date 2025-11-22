@@ -3,50 +3,51 @@
 @tailwind utilities;
 
 :root {
-  /* Modern Sleek Palette - Professional & Catchy */
-  --bg-dark: #050505;
-  /* Deep Black */
-  --bg-card: rgba(20, 20, 25, 0.6);
-  --bg-modal: rgba(30, 30, 35, 0.75);
-  /* Semi-transparent for glass effect */
+  /* Modern Light Palette - Version 3.0 */
+  --bg-dark: #f8fafc;
+  /* Light Slate Background */
+  --bg-card: #ffffff;
+  /* White Cards */
+  --bg-modal: #ffffff;
+  /* White Modals */
 
   /* Brand Colors */
   --primary: #10b981;
-  /* Vibrant Emerald */
-  --primary-glow: rgba(16, 185, 129, 0.5);
+  /* Emerald 500 */
+  --primary-glow: rgba(16, 185, 129, 0.2);
   --accent: #8b5cf6;
   /* Violet */
-  --accent-glow: rgba(139, 92, 246, 0.5);
+  --accent-glow: rgba(139, 92, 246, 0.2);
 
   --success: #10b981;
   --danger: #ef4444;
 
-  --text-main: #ffffff;
-  --text-muted: #9ca3af;
+  --text-main: #0f172a;
+  /* Slate 900 */
+  --text-muted: #64748b;
+  /* Slate 500 */
 
-  --border: rgba(255, 255, 255, 0.08);
+  --border: #e2e8f0;
+  /* Slate 200 */
 
-  /* Advanced Glassmorphism */
-  --glass-bg: rgba(255, 255, 255, 0.03);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
-  --glass-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-  --backdrop-blur: blur(20px);
+  /* Glassmorphism (Subtle for Light Mode) */
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: 1px solid rgba(226, 232, 240, 0.8);
+  --glass-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --backdrop-blur: blur(12px);
 
   /* Inputs & UI */
-  --input-bg: rgba(0, 0, 0, 0.3);
-  --input-border: 1px solid rgba(255, 255, 255, 0.1);
-  --input-focus: 1px solid var(--primary);
+  --input-bg: #ffffff;
+  --input-border: 1px solid #cbd5e1;
+  --input-focus: 2px solid var(--primary);
 
   /* Typography */
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 
   /* Spacing & Radius */
   --radius-xl: 24px;
-  /* For Modals */
   --radius-lg: 16px;
-  /* For Cards */
   --radius-md: 12px;
-  /* For Inputs */
   --radius-sm: 8px;
 }
 
@@ -62,10 +63,6 @@ body {
   color: var(--text-main);
   min-height: 100vh;
   overflow-x: hidden;
-  /* Subtle background gradient mesh */
-  background-image:
-    radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.08) 0%, transparent 25%);
 }
 
 /* Scrollbar */
@@ -74,16 +71,16 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-dark);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #cbd5e1;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #94a3b8;
 }
 
 /* Typography Utilities */

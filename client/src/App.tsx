@@ -679,10 +679,10 @@ function App() {
           )}
         </nav>
 
-        <div className="p-6 border-t border-glass">
+        <div className="p-6 border-t border-slate-200">
           <button
             onClick={() => { setIsLoggedIn(false); setToken(''); }}
-            className="flex items-center gap-2 text-xs text-danger hover:underline"
+            className="flex items-center gap-2 text-xs text-red-500 hover:underline"
           >
             <LogOut size={14} />
             Logout ({email})
