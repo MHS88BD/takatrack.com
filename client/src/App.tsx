@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Wallet, Plus, Trash2, Edit2, X, CreditCard, Banknote, Menu, BarChart3, DollarSign, ArrowRightLeft, TrendingUp, Download, FileText, ChevronLeft, ChevronRight, Bell } from 'lucide-react';
+import { Wallet, Plus, Trash2, Edit2, X, CreditCard, Banknote, Menu, BarChart3, ArrowRightLeft, TrendingUp, Download, FileText, ChevronLeft, ChevronRight, Bell } from 'lucide-react';
 import axios from 'axios';
 import './App.css';
 import LandingPage from './components/LandingPage';
@@ -411,7 +411,7 @@ function App() {
             setIsTransactionModalOpen(false);
             fetchTransactions();
             fetchWallets();
-            fetchStats();
+            // fetchStats();
         } catch (error: any) {
             alert('Failed: ' + (error.response?.data?.message || error.message));
         } finally {
