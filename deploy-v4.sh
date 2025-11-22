@@ -2,13 +2,15 @@
 echo "Deploying V4 Redesign (Top Nav & Dashboard)..."
 
 # 1. Rebuild Frontend
-cd /var/www/takatrack/client
-echo "Installing dependencies..."
-npm install
-# 2. Database Migration
+# 1. Database Migration
 echo "Running database migrations..."
 npx prisma generate
 npx prisma db push
+
+# 2. Rebuild Frontend
+cd /var/www/takatrack/client
+echo "Installing dependencies..."
+npm install
 
 # 3. Build Frontend
 echo "Building frontend..."
