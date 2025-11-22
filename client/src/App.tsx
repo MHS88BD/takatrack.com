@@ -143,27 +143,37 @@ function App() {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    console.log('Auth attempt:', { isSignupMode, email, hasPassword: !!password });
+
     try {
       if (isSignupMode) {
         // Signup
+        console.log('Attempting signup...');
         const res = await axios.post(`${API_URL}/auth/register`, {
           email,
           password,
-          name: name || email.split('@')[0], // Use email prefix if name not provided
+          name: name || email.split('@')[0],
           phone: phone || ''
         });
+        console.log('Signup successful:', res.data);
         setToken(res.data.token);
         setRole(res.data.data.user.role);
         setIsLoggedIn(true);
       } else {
         // Login
+        console.log('Attempting login to:', `${API_URL}/auth/login`);
         const res = await axios.post(`${API_URL}/auth/login`, { email, password });
+        console.log('Login successful:', res.data);
         setToken(res.data.token);
         setRole(res.data.data.user.role);
         setIsLoggedIn(true);
       }
     } catch (error: any) {
-      alert(error.response?.data?.message || `${isSignupMode ? 'Signup' : 'Login'} failed`);
+      console.error('Auth error:', error);
+      console.error('Error response:', error.response?.data);
+      const errorMessage = error.response?.data?.message || error.message || `${isSignupMode ? 'Signup' : 'Login'} failed`;
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -763,7 +773,14 @@ function App() {
 
         <div className="p-6 border-t border-slate-200">
           <button
-            onClick={() => { setIsLoggedIn(false); setToken(''); }}
+            onClick={() => {
+              setIsLoggedIn(false);
+              setToken('');
+              setEmail('');
+              setPassword('');
+              setName('');
+              setPhone('');
+            }}
             className="flex items-center gap-2 text-xs text-red-500 hover:underline"
           >
             <LogOut size={14} />
