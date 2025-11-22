@@ -16,7 +16,7 @@ export const register = async (
     next: NextFunction
 ) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, name, phone } = req.body;
 
         if (!email || !password) {
             return next(new AppError('Please provide email and password', 400));
@@ -36,6 +36,8 @@ export const register = async (
             data: {
                 email,
                 password_hash: hashedPassword,
+                name: name || null,
+                phone: phone || null,
             },
         });
 
@@ -48,6 +50,8 @@ export const register = async (
                 user: {
                     id: newUser.id,
                     email: newUser.email,
+                    name: newUser.name,
+                    phone: newUser.phone,
                     role: newUser.role,
                 },
             },

@@ -137,28 +137,54 @@ function App() {
     }
   }, [isLoggedIn, token, role, currentPage]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [isSignupMode, setIsSignupMode] = useState(false);
+
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await axios.post(`${API_URL}/auth/login`, { email, password });
-      setToken(res.data.token);
-      setRole(res.data.data.user.role);
-      setIsLoggedIn(true);
-    } catch (error: any) {
-      if (error.response?.status === 401) {
-        try {
-          const regRes = await axios.post(`${API_URL}/auth/register`, { email, password });
-          setToken(regRes.data.token);
-          setRole(regRes.data.data.user.role);
-          setIsLoggedIn(true);
-        } catch (regError) {
-          alert('Login/Registration failed');
-        }
+      if (isSignupMode) {
+        // Signup
+        const res = await axios.post(`${API_URL}/auth/register`, {
+          email,
+          password,
+          name: name || email.split('@')[0], // Use email prefix if name not provided
+          phone: phone || ''
+        });
+        setToken(res.data.token);
+        setRole(res.data.data.user.role);
+        setIsLoggedIn(true);
+      } else {
+        // Login
+        const res = await axios.post(`${API_URL}/auth/login`, { email, password });
+        setToken(res.data.token);
+        setRole(res.data.data.user.role);
+        setIsLoggedIn(true);
       }
+    } catch (error: any) {
+      alert(error.response?.data?.message || `${isSignupMode ? 'Signup' : 'Login'} failed`);
     } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      fetchWallets();
+      fetchCategories();
+      fetchTransactions();
+      fetchStats();
+      fetchLoans();
+      if (role === 'ADMIN') {
+        fetchAdminData();
+      }
+    }
+  }, [isLoggedIn]);
+
+  const config = {
+    headers: { Authorization: `Bearer ${token}` }
   };
 
   const fetchWallets = async () => {
@@ -197,6 +223,15 @@ function App() {
     }
   };
 
+  const fetchLoans = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/loans`, config);
+      setLoans(res.data.data.loans);
+    } catch (error) {
+      console.error('Failed to fetch loans:', error);
+    }
+  };
+
   const fetchAdminData = async () => {
     try {
       const statsRes = await axios.get(`${API_URL}/admin/stats`, config);
@@ -205,15 +240,6 @@ function App() {
       setUsers(usersRes.data.data.users);
     } catch (error) {
       console.error('Failed to fetch admin data:', error);
-    }
-  };
-
-  const fetchLoans = async () => {
-    try {
-      const res = await axios.get(`${API_URL}/loans`, config);
-      setLoans(res.data.data.loans);
-    } catch (error) {
-      console.error('Failed to fetch loans:', error);
     }
   };
 
@@ -409,16 +435,6 @@ function App() {
     setIsCategoryModalOpen(true);
   };
 
-  const handleDeleteCategory = async (id: string) => {
-    if (!confirm('Delete this category?')) return;
-    try {
-      await axios.delete(`${API_URL}/transaction-categories/${id}`, config);
-      fetchCategories();
-    } catch (error: any) {
-      alert('Failed: ' + (error.response?.data?.message || error.message));
-    }
-  };
-
   const handleSubmitCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -437,20 +453,20 @@ function App() {
     }
   };
 
-  const handleAddSubCategory = (category: Category) => {
-    setSelectedCategoryForSub(category);
-    setSubCategoryForm({ name: '' });
-    setIsSubCategoryModalOpen(true);
-  };
-
-  const handleDeleteSubCategory = async (id: string) => {
-    if (!confirm('Delete this subcategory?')) return;
+  const handleDeleteCategory = async (id: string) => {
+    if (!confirm('Delete this category?')) return;
     try {
-      await axios.delete(`${API_URL}/transaction-categories/subcategories/${id}`, config);
+      await axios.delete(`${API_URL}/transaction-categories/${id}`, config);
       fetchCategories();
     } catch (error: any) {
       alert('Failed: ' + (error.response?.data?.message || error.message));
     }
+  };
+
+  const handleAddSubCategory = (category: Category) => {
+    setSelectedCategoryForSub(category);
+    setSubCategoryForm({ name: '' });
+    setIsSubCategoryModalOpen(true);
   };
 
   const handleSubmitSubCategory = async (e: React.FormEvent) => {
@@ -468,6 +484,16 @@ function App() {
       alert('Failed: ' + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteSubCategory = async (id: string) => {
+    if (!confirm('Delete this subcategory?')) return;
+    try {
+      await axios.delete(`${API_URL}/transaction-categories/subcategories/${id}`, config);
+      fetchCategories();
+    } catch (error: any) {
+      alert('Failed: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -576,7 +602,56 @@ function App() {
             </div>
             <h1 className="text-2xl font-bold text-slate-900">Taka Track</h1>
           </div>
-          <form onSubmit={handleLogin} className="space-y-4">
+
+          {/* Toggle between Login and Signup */}
+          <div className="flex gap-2 mb-6">
+            <button
+              onClick={() => setIsSignupMode(false)}
+              className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${!isSignupMode
+                  ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+            >
+              Login
+            </button>
+            <button
+              onClick={() => setIsSignupMode(true)}
+              className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${isSignupMode
+                  ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+            >
+              Sign Up
+            </button>
+          </div>
+
+          <form onSubmit={handleAuth} className="space-y-4">
+            {isSignupMode && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-slate-700">Full Name</label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 transition-all"
+                    placeholder="John Doe"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-slate-700">Phone Number</label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 transition-all"
+                    placeholder="+880 1234567890"
+                    required
+                  />
+                </div>
+              </>
+            )}
             <div>
               <label className="block text-sm font-medium mb-2 text-slate-700">Email</label>
               <input
@@ -584,7 +659,7 @@ function App() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 transition-all"
-                placeholder="demo@example.com"
+                placeholder="you@example.com"
                 required
               />
             </div>
@@ -595,17 +670,25 @@ function App() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 transition-all"
-                placeholder="demo123"
+                placeholder="••••••••"
                 required
+                minLength={6}
               />
             </div>
-            <button type="submit" disabled={loading} className="w-full py-3 rounded-xl bg-emerald-500 text-white font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40">
-              {loading ? 'Loading...' : 'Login / Register'}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 rounded-xl bg-emerald-500 text-white font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Please wait...' : (isSignupMode ? 'Create Account' : 'Login')}
             </button>
           </form>
-          <p className="text-xs text-slate-400 text-center mt-6">
-            Demo: demo@example.com / demo123
-          </p>
+
+          {!isSignupMode && (
+            <p className="text-xs text-slate-400 text-center mt-6">
+              Demo: demo@example.com / demo123
+            </p>
+          )}
         </div>
       </div>
     );
