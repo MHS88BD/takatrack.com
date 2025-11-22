@@ -18,6 +18,8 @@ NC='\033[0m' # No Color
 
 # Configuration
 APP_DIR="/var/www/takatrack"
+cd "$APP_DIR"
+
 REPO_URL="https://github.com/MHS88BD/takatrack.com.git"
 DOMAIN="takatracker.dupno.com"
 DB_NAME="takatrack_db"

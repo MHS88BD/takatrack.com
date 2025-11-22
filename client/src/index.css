@@ -11,9 +11,9 @@
   /* Semi-transparent for glass effect */
 
   /* Brand Colors */
-  --primary: #2563eb;
-  /* Vibrant Blue */
-  --primary-glow: rgba(37, 99, 235, 0.5);
+  --primary: #10b981;
+  /* Vibrant Emerald */
+  --primary-glow: rgba(16, 185, 129, 0.5);
   --accent: #8b5cf6;
   /* Violet */
   --accent-glow: rgba(139, 92, 246, 0.5);

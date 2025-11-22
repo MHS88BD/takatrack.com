@@ -562,46 +562,48 @@ function App() {
     }
 
     return (
-      <div className="flex items-center justify-center min-h-screen bg-dark">
-        <div className="bg-modal p-8 rounded-lg border border-glass max-w-md w-full mx-4 relative">
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
+        <div className="bg-white p-8 rounded-2xl shadow-xl border border-slate-100 max-w-md w-full mx-4 relative">
           <button
             onClick={() => setShowLogin(false)}
-            className="absolute top-4 left-4 text-muted hover:text-main text-sm"
+            className="absolute top-4 left-4 text-slate-400 hover:text-slate-600 text-sm transition-colors"
           >
             ← Back
           </button>
           <div className="flex items-center justify-center gap-3 mb-8">
-            <Wallet className="w-10 h-10 text-primary" />
-            <h1 className="text-2xl font-bold">Taka Track</h1>
+            <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20 transform -rotate-6">
+              <Wallet className="text-white w-6 h-6" />
+            </div>
+            <h1 className="text-2xl font-bold text-slate-900">Taka Track</h1>
           </div>
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Email</label>
+              <label className="block text-sm font-medium mb-2 text-slate-700">Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 bg-surface border border-glass rounded-lg focus:outline-none focus:border-primary"
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 transition-all"
                 placeholder="demo@example.com"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Password</label>
+              <label className="block text-sm font-medium mb-2 text-slate-700">Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2 bg-surface border border-glass rounded-lg focus:outline-none focus:border-primary"
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 transition-all"
                 placeholder="demo123"
                 required
               />
             </div>
-            <button type="submit" disabled={loading} className="w-full btn-primary justify-center">
+            <button type="submit" disabled={loading} className="w-full py-3 rounded-xl bg-emerald-500 text-white font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40">
               {loading ? 'Loading...' : 'Login / Register'}
             </button>
           </form>
-          <p className="text-xs text-muted text-center mt-4">
+          <p className="text-xs text-slate-400 text-center mt-6">
             Demo: demo@example.com / demo123
           </p>
         </div>

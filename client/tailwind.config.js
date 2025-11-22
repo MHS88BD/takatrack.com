@@ -8,7 +8,7 @@ export default {
         extend: {
             colors: {
                 dark: '#050505',
-                primary: '#2563eb',
+                primary: '#10b981', // Emerald 500
                 accent: '#8b5cf6',
                 success: '#10b981',
                 danger: '#ef4444',
