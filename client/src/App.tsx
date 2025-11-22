@@ -118,7 +118,6 @@ function App() {
   const [adminStats, setAdminStats] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
 
-  const config = { headers: { Authorization: `Bearer ${token} ` } };
 
   useEffect(() => {
     if (isLoggedIn && token) {
@@ -608,8 +607,8 @@ function App() {
             <button
               onClick={() => setIsSignupMode(false)}
               className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${!isSignupMode
-                  ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
             >
               Login
@@ -617,8 +616,8 @@ function App() {
             <button
               onClick={() => setIsSignupMode(true)}
               className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${isSignupMode
-                  ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
             >
               Sign Up

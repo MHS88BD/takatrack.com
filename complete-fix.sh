@@ -13,18 +13,35 @@ echo "📥 Pulling latest code..."
 git fetch origin
 git reset --hard origin/main
 
-# 2. Fix Backend
+# 2. Ensure .env file exists
+echo "📝 Checking .env file..."
+if [ ! -f ".env" ]; then
+    echo "Creating .env file..."
+    cat > .env << EOL
+DATABASE_URL="file:./dev.db"
+JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
+NODE_ENV="production"
+PORT=3001
+EOL
+else
+    # Make sure DATABASE_URL is set correctly
+    if ! grep -q "DATABASE_URL" .env; then
+        echo 'DATABASE_URL="file:./dev.db"' >> .env
+    fi
+fi
+
+# 3. Fix Backend
 echo "🔧 Rebuilding Backend..."
 npm install
 npx prisma generate
 npx prisma db push --accept-data-loss
 npm run build
 
-# 3. Restart Backend
+# 4. Restart Backend
 echo "🔄 Restarting Backend..."
 pm2 restart takatrack-api
 
-# 4. Clean Install Frontend
+# 5. Clean Install Frontend
 echo "🧹 Cleaning frontend completely..."
 cd client
 rm -rf dist node_modules package-lock.json .vite
