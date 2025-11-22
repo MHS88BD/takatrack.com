@@ -97,13 +97,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                     <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                                 </span>
-                                <span className="text-xs font-bold text-emerald-600 uppercase tracking-wide">#1 Finance App of 2025</span>
+                                <span className="text-xs font-bold text-emerald-600 uppercase tracking-wide">New Version 3.0 Live</span>
                             </div>
 
                             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-slate-900 leading-[1.1] mb-6 tracking-tight">
                                 Money management <br />
                                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500">
-                                    made beautiful.
+                                    made simple & beautiful.
                                 </span>
                             </h1>
 
@@ -173,7 +173,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                                         <div className="h-40 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl mb-8 p-5 text-white shadow-lg shadow-emerald-500/20 relative overflow-hidden">
                                             <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-xl" />
                                             <div className="absolute -left-4 -bottom-4 w-24 h-24 bg-black/10 rounded-full blur-xl" />
-                                            
+
                                             <div className="flex justify-between mb-4 relative z-10">
                                                 <span className="text-sm font-medium opacity-90">Weekly Spending</span>
                                                 <span className="text-sm font-bold bg-white/20 px-2 py-0.5 rounded-lg">+12%</span>
@@ -223,7 +223,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div className="absolute bottom-32 -left-12 bg-white p-4 rounded-2xl shadow-xl border border-slate-100 animate-float z-30" style={{ animationDelay: '1.5s' }}>
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
