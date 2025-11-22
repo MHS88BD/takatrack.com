@@ -10,7 +10,7 @@ npm run build
 
 # 2. Deploy to Nginx
 echo "Deploying to web root..."
-sudo cp -r dist/* /var/www/takatrack/html/
+sudo cp -r dist/* /var/www/takatrack/html
 
 # 3. Restart Nginx
 echo "Restarting Nginx..."

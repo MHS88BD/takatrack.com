@@ -144,7 +144,7 @@ function App() {
         e.preventDefault();
         setLoading(true);
 
-        console.log('Auth attempt:', { isSignupMode, email, hasPassword: !!password });
+        console.log('Auth attempt:', { isSignupMode, email, hasPassword: !!password, apiUrl: API_URL });
 
         try {
             if (isSignupMode) {
@@ -172,7 +172,16 @@ function App() {
         } catch (error: any) {
             console.error('Auth error:', error);
             console.error('Error response:', error.response?.data);
-            const errorMessage = error.response?.data?.message || error.message || `${isSignupMode ? 'Signup' : 'Login'} failed`;
+
+            let errorMessage = '';
+            if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+                errorMessage = `Cannot connect to server at ${API_URL}. Please check:\n1. Backend server is running\n2. API URL is correct\n3. CORS is configured`;
+            } else if (error.response) {
+                errorMessage = error.response.data?.message || `Server error: ${error.response.status}`;
+            } else {
+                errorMessage = error.message || `${isSignupMode ? 'Signup' : 'Login'} failed`;
+            }
+
             alert(errorMessage);
         } finally {
             setLoading(false);
