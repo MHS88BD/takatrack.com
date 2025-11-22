@@ -251,7 +251,7 @@ cd /var/www/takatrack
 git pull origin main
 npm install
 npx prisma generate
-npx prisma migrate deploy
+npx prisma db push
 npm run build
 cd client
 npm install
