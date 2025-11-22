@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Wallet, Plus, Trash2, Edit2, X, LogOut, CreditCard, Tag, Users, Banknote, Menu, BarChart3, DollarSign, ArrowRightLeft, Shield, TrendingUp, Activity, Lock, Unlock, Download, FileText, ChevronLeft, ChevronRight, Settings, Bell, Search } from 'lucide-react';
+import { Wallet, Plus, Trash2, Edit2, X, CreditCard, Banknote, Menu, BarChart3, DollarSign, ArrowRightLeft, TrendingUp, Download, FileText, ChevronLeft, ChevronRight, Bell } from 'lucide-react';
 import axios from 'axios';
 import './App.css';
 import LandingPage from './components/LandingPage';
@@ -73,14 +73,14 @@ function App() {
         sub_category_id: '',
         wallet_id: ''
     });
-    const [stats, setStats] = useState({
-        totalIncome: 0,
-        totalExpense: 0,
-        balance: 0
-    });
+    // const [stats, setStats] = useState({
+    //     totalIncome: 0,
+    //     totalExpense: 0,
+    //     balance: 0
+    // });
 
     // Category state
-    const [categoryType, setCategoryType] = useState<'INCOME' | 'EXPENSE'>('EXPENSE');
+    // const [categoryType, setCategoryType] = useState<'INCOME' | 'EXPENSE'>('EXPENSE');
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
     const [isSubCategoryModalOpen, setIsSubCategoryModalOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -111,12 +111,12 @@ function App() {
     });
 
     // Reports state
-    const [monthlyStats, setMonthlyStats] = useState<any[]>([]);
-    const [categoryStats, setCategoryStats] = useState<any[]>([]);
+    // const [monthlyStats, setMonthlyStats] = useState<any[]>([]);
+    // const [categoryStats, setCategoryStats] = useState<any[]>([]);
 
     // Admin state
-    const [adminStats, setAdminStats] = useState<any>(null);
-    const [users, setUsers] = useState<any[]>([]);
+    // const [adminStats, setAdminStats] = useState<any>(null);
+    // const [users, setUsers] = useState<any[]>([]);
 
 
     useEffect(() => {
@@ -124,15 +124,15 @@ function App() {
             fetchWallets();
             fetchCategories();
             fetchTransactions();
-            fetchStats();
+            // fetchStats();
             fetchLoans();
-            fetchReports();
+            // fetchReports();
         }
     }, [isLoggedIn, token]);
 
     useEffect(() => {
         if (isLoggedIn && token && role === 'ADMIN' && currentPage === 'admin') {
-            fetchAdminData();
+            // fetchAdminData();
         }
     }, [isLoggedIn, token, role, currentPage]);
 
@@ -184,10 +184,10 @@ function App() {
             fetchWallets();
             fetchCategories();
             fetchTransactions();
-            fetchStats();
+            // fetchStats();
             fetchLoans();
             if (role === 'ADMIN') {
-                fetchAdminData();
+                // fetchAdminData();
             }
         }
     }, [isLoggedIn]);
@@ -223,14 +223,14 @@ function App() {
         }
     };
 
-    const fetchStats = async () => {
-        try {
-            const res = await axios.get(`${API_URL}/transactions/stats`, config);
-            setStats(res.data.data);
-        } catch (error) {
-            console.error('Failed to fetch stats:', error);
-        }
-    };
+    // const fetchStats = async () => {
+    //     try {
+    //         const res = await axios.get(`${API_URL}/transactions/stats`, config);
+    //         setStats(res.data.data);
+    //     } catch (error) {
+    //         console.error('Failed to fetch stats:', error);
+    //     }
+    // };
 
     const fetchLoans = async () => {
         try {
@@ -241,28 +241,28 @@ function App() {
         }
     };
 
-    const fetchAdminData = async () => {
-        try {
-            const statsRes = await axios.get(`${API_URL}/admin/stats`, config);
-            setAdminStats(statsRes.data.data.stats);
-            const usersRes = await axios.get(`${API_URL}/admin/users`, config);
-            setUsers(usersRes.data.data.users);
-        } catch (error) {
-            console.error('Failed to fetch admin data:', error);
-        }
-    };
+    // const fetchAdminData = async () => {
+    //     try {
+    //         const statsRes = await axios.get(`${API_URL}/admin/stats`, config);
+    //         setAdminStats(statsRes.data.data.stats);
+    //         const usersRes = await axios.get(`${API_URL}/admin/users`, config);
+    //         setUsers(usersRes.data.data.users);
+    //     } catch (error) {
+    //         console.error('Failed to fetch admin data:', error);
+    //     }
+    // };
 
-    const fetchReports = async () => {
-        try {
-            const monthlyRes = await axios.get(`${API_URL}/reports/monthly`, config);
-            setMonthlyStats(monthlyRes.data.data.monthlyData);
-
-            const categoryRes = await axios.get(`${API_URL}/reports/category?type=EXPENSE`, config);
-            setCategoryStats(categoryRes.data.data.stats);
-        } catch (error) {
-            console.error('Failed to fetch reports:', error);
-        }
-    };
+    // const fetchReports = async () => {
+    //     try {
+    //         const monthlyRes = await axios.get(`${API_URL}/reports/monthly`, config);
+    //         setMonthlyStats(monthlyRes.data.data.monthlyData);
+    //
+    //         const categoryRes = await axios.get(`${API_URL}/reports/category?type=EXPENSE`, config);
+    //         setCategoryStats(categoryRes.data.data.stats);
+    //     } catch (error) {
+    //         console.error('Failed to fetch reports:', error);
+    //     }
+    // };
 
     // Export functions
     const handleExportCSV = async (type: 'transactions' | 'wallets' | 'loans' | 'categories') => {
@@ -306,25 +306,25 @@ function App() {
     };
 
 
-    const handleToggleUserStatus = async (userId: string) => {
-        if (!confirm('Are you sure you want to change this user\'s status?')) return;
-        try {
-            await axios.patch(`${API_URL}/admin/users/${userId}/toggle-status`, {}, config);
-            fetchAdminData();
-        } catch (error: any) {
-            alert('Failed: ' + (error.response?.data?.message || error.message));
-        }
-    };
+    // const handleToggleUserStatus = async (userId: string) => {
+    //     if (!confirm('Are you sure you want to change this user\'s status?')) return;
+    //     try {
+    //         await axios.patch(`${API_URL}/admin/users/${userId}/toggle-status`, {}, config);
+    //         fetchAdminData();
+    //     } catch (error: any) {
+    //         alert('Failed: ' + (error.response?.data?.message || error.message));
+    //     }
+    // };
 
-    const handleDeleteUser = async (userId: string) => {
-        if (!confirm('WARNING: This will delete the user and ALL their data. This cannot be undone. Continue?')) return;
-        try {
-            await axios.delete(`${API_URL}/admin/users/${userId}`, config);
-            fetchAdminData();
-        } catch (error: any) {
-            alert('Failed: ' + (error.response?.data?.message || error.message));
-        }
-    };
+    // const handleDeleteUser = async (userId: string) => {
+    //     if (!confirm('WARNING: This will delete the user and ALL their data. This cannot be undone. Continue?')) return;
+    //     try {
+    //         await axios.delete(`${API_URL}/admin/users/${userId}`, config);
+    //         fetchAdminData();
+    //     } catch (error: any) {
+    //         alert('Failed: ' + (error.response?.data?.message || error.message));
+    //     }
+    // };
 
     const handleAddWallet = () => {
         setEditingWallet(null);
@@ -332,15 +332,15 @@ function App() {
         setIsWalletModalOpen(true);
     };
 
-    const handleEditWallet = (wallet: WalletType) => {
-        setEditingWallet(wallet);
-        setWalletForm({
-            name: wallet.name,
-            type: wallet.type,
-            balance: wallet.balance.toString()
-        });
-        setIsWalletModalOpen(true);
-    };
+    // const handleEditWallet = (wallet: WalletType) => {
+    //     setEditingWallet(wallet);
+    //     setWalletForm({
+    //         name: wallet.name,
+    //         type: wallet.type,
+    //         balance: wallet.balance.toString()
+    //     });
+    //     setIsWalletModalOpen(true);
+    // };
 
     const handleSubmitWallet = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -370,16 +370,16 @@ function App() {
         }
     };
 
-    const handleDeleteWallet = async (id: string) => {
-        if (!confirm('Delete this wallet?')) return;
-        try {
-            await axios.delete(`${API_URL}/wallets/${id}`, config);
-            alert('Wallet deleted!');
-            fetchWallets();
-        } catch (error: any) {
-            alert('Failed: ' + (error.response?.data?.message || error.message));
-        }
-    };
+    // const handleDeleteWallet = async (id: string) => {
+    //     if (!confirm('Delete this wallet?')) return;
+    //     try {
+    //         await axios.delete(`${API_URL}/wallets/${id}`, config);
+    //         alert('Wallet deleted!');
+    //         fetchWallets();
+    //     } catch (error: any) {
+    //         alert('Failed: ' + (error.response?.data?.message || error.message));
+    //     }
+    // };
 
     const handleAddTransaction = () => {
         setTransactionForm({
@@ -419,30 +419,30 @@ function App() {
         }
     };
 
-    const handleDeleteTransaction = async (id: string) => {
-        if (!confirm('Delete this transaction?')) return;
-        try {
-            await axios.delete(`${API_URL}/transactions/${id}`, config);
-            alert('Transaction deleted!');
-            fetchTransactions();
-            fetchWallets();
-            fetchStats();
-        } catch (error: any) {
-            alert('Failed: ' + (error.response?.data?.message || error.message));
-        }
-    };
+    // const handleDeleteTransaction = async (id: string) => {
+    //     if (!confirm('Delete this transaction?')) return;
+    //     try {
+    //         await axios.delete(`${API_URL}/transactions/${id}`, config);
+    //         alert('Transaction deleted!');
+    //         fetchTransactions();
+    //         fetchWallets();
+    //         fetchStats();
+    //     } catch (error: any) {
+    //         alert('Failed: ' + (error.response?.data?.message || error.message));
+    //     }
+    // };
 
     const handleAddCategory = () => {
         setEditingCategory(null);
-        setCategoryForm({ name: '', type: categoryType });
+        setCategoryForm({ name: '', type: 'EXPENSE' });
         setIsCategoryModalOpen(true);
     };
 
-    const handleEditCategory = (category: Category) => {
-        setEditingCategory(category);
-        setCategoryForm({ name: category.name, type: category.type });
-        setIsCategoryModalOpen(true);
-    };
+    // const handleEditCategory = (category: Category) => {
+    //     setEditingCategory(category);
+    //     setCategoryForm({ name: category.name, type: category.type });
+    //     setIsCategoryModalOpen(true);
+    // };
 
     const handleSubmitCategory = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -472,11 +472,11 @@ function App() {
         }
     };
 
-    const handleAddSubCategory = (category: Category) => {
-        setSelectedCategoryForSub(category);
-        setSubCategoryForm({ name: '' });
-        setIsSubCategoryModalOpen(true);
-    };
+    // const handleAddSubCategory = (category: Category) => {
+    //     setSelectedCategoryForSub(category);
+    //     setSubCategoryForm({ name: '' });
+    //     setIsSubCategoryModalOpen(true);
+    // };
 
     const handleSubmitSubCategory = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -496,15 +496,15 @@ function App() {
         }
     };
 
-    const handleDeleteSubCategory = async (id: string) => {
-        if (!confirm('Delete this subcategory?')) return;
-        try {
-            await axios.delete(`${API_URL}/transaction-categories/subcategories/${id}`, config);
-            fetchCategories();
-        } catch (error: any) {
-            alert('Failed: ' + (error.response?.data?.message || error.message));
-        }
-    };
+    // const handleDeleteSubCategory = async (id: string) => {
+    //     if (!confirm('Delete this subcategory?')) return;
+    //     try {
+    //         await axios.delete(`${API_URL}/transaction-categories/subcategories/${id}`, config);
+    //         fetchCategories();
+    //     } catch (error: any) {
+    //         alert('Failed: ' + (error.response?.data?.message || error.message));
+    //     }
+    // };
 
     const handleAddLoan = () => {
         setLoanForm({
@@ -570,26 +570,26 @@ function App() {
         return { total, bank, cash, credit };
     };
 
-    const getWalletIcon = (type: string) => {
-        switch (type) {
-            case 'BANK': return <Banknote size={24} />;
-            case 'CASH': return <DollarSign size={24} />;
-            case 'CREDIT_CARD': return <CreditCard size={24} />;
-            default: return <Wallet size={24} />;
-        }
-    };
+    // const getWalletIcon = (type: string) => {
+    //     switch (type) {
+    //         case 'BANK': return <Banknote size={24} />;
+    //         case 'CASH': return <DollarSign size={24} />;
+    //         case 'CREDIT_CARD': return <CreditCard size={24} />;
+    //         default: return <Wallet size={24} />;
+    //     }
+    // };
 
-    const getWalletColor = (type: string) => {
-        switch (type) {
-            case 'BANK': return 'bg-blue-500/20 text-blue-400';
-            case 'CASH': return 'bg-green-500/20 text-green-400';
-            case 'CREDIT_CARD': return 'bg-purple-500/20 text-purple-400';
-            default: return 'bg-gray-500/20 text-gray-400';
-        }
-    };
+    // const getWalletColor = (type: string) => {
+    //     switch (type) {
+    //         case 'BANK': return 'bg-blue-500/20 text-blue-400';
+    //         case 'CASH': return 'bg-green-500/20 text-green-400';
+    //         case 'CREDIT_CARD': return 'bg-purple-500/20 text-purple-400';
+    //         default: return 'bg-gray-500/20 text-gray-400';
+    //     }
+    // };
 
-    const filteredCategories = categories.filter(c => c.type === transactionForm.type);
-    const selectedCategory = categories.find(c => c.id === transactionForm.category_id);
+    // const filteredCategories = categories.filter(c => c.type === transactionForm.type);
+    // const selectedCategory = categories.find(c => c.id === transactionForm.category_id);
 
     if (!isLoggedIn) {
         if (!showLogin) {
@@ -731,7 +731,7 @@ function App() {
                 </div>
 
                 <div className="nav-right">
-                    <button className="btn-record" onClick={() => setIsTransactionModalOpen(true)}>
+                    <button className="btn-record" onClick={handleAddTransaction}>
                         <Plus size={16} />
                         Record
                     </button>
@@ -924,7 +924,7 @@ function App() {
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-xl font-bold">Categories</h2>
-                            <button className="btn-primary" onClick={() => setIsCategoryModalOpen(true)}>
+                            <button className="btn-primary" onClick={handleAddCategory}>
                                 <Plus size={16} /> Add Category
                             </button>
                         </div>
@@ -962,7 +962,7 @@ function App() {
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-xl font-bold">Loans Management</h2>
-                            <button className="btn-primary" onClick={() => setIsLoanModalOpen(true)}>
+                            <button className="btn-primary" onClick={handleAddLoan}>
                                 <Plus size={16} /> New Loan
                             </button>
                         </div>
@@ -986,7 +986,7 @@ function App() {
                                             </div>
                                         </div>
                                         <div className="flex flex-col gap-2">
-                                            <button className="btn-secondary text-xs" onClick={() => { setSelectedLoan(loan); setIsPaymentModalOpen(true); }}>Add Payment</button>
+                                            <button className="btn-secondary text-xs" onClick={() => handleAddPayment(loan)}>Add Payment</button>
                                         </div>
                                     </div>
                                 </div>
@@ -1135,8 +1135,8 @@ function App() {
                                 <div>
                                     <label className="block text-sm font-medium mb-2">Wallet</label>
                                     <select
-                                        value={transactionForm.walletId}
-                                        onChange={(e) => setTransactionForm({ ...transactionForm, walletId: e.target.value })}
+                                        value={transactionForm.wallet_id}
+                                        onChange={(e) => setTransactionForm({ ...transactionForm, wallet_id: e.target.value })}
                                         className="w-full glass-input"
                                         required
                                     >
@@ -1150,8 +1150,8 @@ function App() {
                                 <div>
                                     <label className="block text-sm font-medium mb-2">Category</label>
                                     <select
-                                        value={transactionForm.categoryId}
-                                        onChange={(e) => setTransactionForm({ ...transactionForm, categoryId: e.target.value })}
+                                        value={transactionForm.category_id}
+                                        onChange={(e) => setTransactionForm({ ...transactionForm, category_id: e.target.value })}
                                         className="w-full glass-input"
                                         required
                                     >
@@ -1403,8 +1403,8 @@ function App() {
                                 <div>
                                     <label className="block text-sm font-medium mb-2">Wallet (for transaction)</label>
                                     <select
-                                        value={loanForm.walletId}
-                                        onChange={(e) => setLoanForm({ ...loanForm, walletId: e.target.value })}
+                                        value={loanForm.wallet_id}
+                                        onChange={(e) => setLoanForm({ ...loanForm, wallet_id: e.target.value })}
                                         className="w-full glass-input"
                                         required
                                     >
@@ -1440,6 +1440,78 @@ function App() {
                                         className="flex-1 glass-btn glass-btn-primary"
                                     >
                                         {loading ? 'Processing...' : 'Create Loan'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+                {isPaymentModalOpen && (
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <div className="bg-modal border border-glass rounded-lg max-w-md w-full p-6 animate-fade-in">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-bold">Add Payment</h3>
+                                <button onClick={() => setIsPaymentModalOpen(false)} className="text-muted hover:text-main">
+                                    <X size={24} />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleSubmitPayment} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">Amount</label>
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted">$</span>
+                                        <input
+                                            type="number"
+                                            value={paymentForm.amount}
+                                            onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                                            className="w-full pl-8 glass-input"
+                                            placeholder="0.00"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">Date</label>
+                                    <input
+                                        type="date"
+                                        value={paymentForm.date}
+                                        onChange={(e) => setPaymentForm({ ...paymentForm, date: e.target.value })}
+                                        className="w-full glass-input"
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">Wallet</label>
+                                    <select
+                                        value={paymentForm.wallet_id}
+                                        onChange={(e) => setPaymentForm({ ...paymentForm, wallet_id: e.target.value })}
+                                        className="w-full glass-input"
+                                        required
+                                    >
+                                        <option value="">Select Wallet</option>
+                                        {wallets.map(w => (
+                                            <option key={w.id} value={w.id}>{w.name} (${w.balance})</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="flex gap-3 pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsPaymentModalOpen(false)}
+                                        className="flex-1 glass-btn glass-btn-secondary"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={loading}
+                                        className="flex-1 glass-btn glass-btn-primary"
+                                    >
+                                        {loading ? 'Processing...' : 'Add Payment'}
                                     </button>
                                 </div>
                             </form>
