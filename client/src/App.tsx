@@ -140,6 +140,14 @@ function App() {
     const [phone, setPhone] = useState('');
     const [isSignupMode, setIsSignupMode] = useState(false);
 
+    // Forgot Password state
+    const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] = useState(false);
+    const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+    const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+    const [resetToken, setResetToken] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+
     const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -311,6 +319,56 @@ function App() {
         } catch (error) {
             console.error(`Failed to export ${type} PDF:`, error);
             alert(`Failed to export ${type} to PDF`);
+        }
+    };
+
+    // Forgot Password handlers
+    const handleForgotPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            await axios.post(`${API_URL}/auth/forgot-password`, {
+                emailOrPhone: forgotPasswordEmail
+            });
+            alert('Password reset request submitted. Please contact administrator for reset token.');
+            setIsForgotPasswordModalOpen(false);
+            setForgotPasswordEmail('');
+            setIsResetPasswordModalOpen(true);
+        } catch (error: any) {
+            alert(error.response?.data?.message || 'Failed to request password reset');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResetPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (newPassword !== confirmPassword) {
+            alert('Passwords do not match');
+            return;
+        }
+
+        if (newPassword.length < 6) {
+            alert('Password must be at least 6 characters');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await axios.post(`${API_URL}/auth/reset-password`, {
+                token: resetToken,
+                newPassword
+            });
+            alert('Password reset successfully! You can now login with your new password.');
+            setIsResetPasswordModalOpen(false);
+            setResetToken('');
+            setNewPassword('');
+            setConfirmPassword('');
+        } catch (error: any) {
+            alert(error.response?.data?.message || 'Failed to reset password');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -693,6 +751,17 @@ function App() {
                                 minLength={6}
                             />
                         </div>
+                        {!isSignupMode && (
+                            <div className="text-right">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsForgotPasswordModalOpen(true)}
+                                    className="text-sm text-emerald-600 hover:text-emerald-700 hover:underline"
+                                >
+                                    Forgot Password?
+                                </button>
+                            </div>
+                        )}
                         <button
                             type="submit"
                             disabled={loading}
@@ -1028,6 +1097,126 @@ function App() {
                 )}
 
                 {/* Modals */}
+                {/* Forgot Password Modal */}
+                {isForgotPasswordModalOpen && (
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <div className="bg-modal border border-glass rounded-lg max-w-md w-full p-6 animate-fade-in">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-bold">Forgot Password</h3>
+                                <button onClick={() => setIsForgotPasswordModalOpen(false)} className="text-muted hover:text-main">
+                                    <X size={24} />
+                                </button>
+                            </div>
+
+                            <p className="text-sm text-muted mb-4">
+                                Enter your email or phone number. An administrator will provide you with a reset token.
+                            </p>
+
+                            <form onSubmit={handleForgotPassword} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">Email or Phone</label>
+                                    <input
+                                        type="text"
+                                        value={forgotPasswordEmail}
+                                        onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                                        className="w-full glass-input"
+                                        placeholder="email@example.com or phone number"
+                                        required
+                                    />
+                                </div>
+                                <div className="flex gap-3 pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsForgotPasswordModalOpen(false)}
+                                        className="flex-1 glass-button"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={loading}
+                                        className="flex-1 btn-primary justify-center"
+                                    >
+                                        {loading ? 'Submitting...' : 'Request Reset'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Reset Password Modal */}
+                {isResetPasswordModalOpen && (
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <div className="bg-modal border border-glass rounded-lg max-w-md w-full p-6 animate-fade-in">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-bold">Reset Password</h3>
+                                <button onClick={() => setIsResetPasswordModalOpen(false)} className="text-muted hover:text-main">
+                                    <X size={24} />
+                                </button>
+                            </div>
+
+                            <p className="text-sm text-muted mb-4">
+                                Enter the reset token provided by the administrator and your new password.
+                            </p>
+
+                            <form onSubmit={handleResetPassword} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">Reset Token</label>
+                                    <input
+                                        type="text"
+                                        value={resetToken}
+                                        onChange={(e) => setResetToken(e.target.value)}
+                                        className="w-full glass-input font-mono text-sm"
+                                        placeholder="Enter token from administrator"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">New Password</label>
+                                    <input
+                                        type="password"
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                        className="w-full glass-input"
+                                        placeholder="••••••••"
+                                        required
+                                        minLength={6}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">Confirm Password</label>
+                                    <input
+                                        type="password"
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        className="w-full glass-input"
+                                        placeholder="••••••••"
+                                        required
+                                        minLength={6}
+                                    />
+                                </div>
+                                <div className="flex gap-3 pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsResetPasswordModalOpen(false)}
+                                        className="flex-1 glass-button"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={loading}
+                                        className="flex-1 btn-primary justify-center"
+                                    >
+                                        {loading ? 'Resetting...' : 'Reset Password'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
                 {isWalletModalOpen && (
                     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                         <div className="bg-modal border border-glass rounded-lg max-w-md w-full p-6 animate-fade-in">

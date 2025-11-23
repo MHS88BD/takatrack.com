@@ -28,6 +28,7 @@ model User {
   loans                 Loan[]
   assetLiabilities      AssetLiability[]
   wallets               Wallet[]
+  passwordResetTokens   PasswordResetToken[]
 }
 
 // Wallet/Account System (Bank, Cash, Credit Card)
@@ -196,4 +197,15 @@ model AssetLiability {
   updated_at      DateTime          @updatedAt
 
   tags Tag[]
+}
+
+// Password Reset Tokens
+model PasswordResetToken {
+  id         String   @id @default(uuid())
+  user_id    String
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  token      String   @unique
+  expires_at DateTime
+  used       Boolean  @default(false)
+  created_at DateTime @default(now())
 }

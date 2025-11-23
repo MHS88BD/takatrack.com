@@ -5,14 +5,34 @@ import { PrismaClient } from '@prisma/client';
 export const prisma = new PrismaClient();
 const app = express();
 
-app.use(cors());
+// CORS configuration for production
+const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://takatracker.com',
+    'https://www.takatracker.com'
+];
+
+app.use(cors({
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true
+}));
+
 app.use(express.json());
+app.set('trust proxy', 1); // Trust first proxy (Nginx)
 
 app.get('/', (req, res) => {
     res.json({ message: 'Taka Track API is running' });
 });
 
 import authRoutes from './routes/authRoutes';
+import passwordResetRoutes from './routes/passwordResetRoutes';
 import walletRoutes from './routes/walletRoutes';
 import transactionCategoryRoutes from './routes/transactionCategoryRoutes';
 import newTransactionRoutes from './routes/newTransactionRoutes';
@@ -32,6 +52,7 @@ import { AppError } from './utils/AppError';
 
 // NEW ROUTES - Working with new schema
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/auth', passwordResetRoutes);
 app.use('/api/v1/wallets', walletRoutes);
 app.use('/api/v1/transaction-categories', transactionCategoryRoutes);
 app.use('/api/v1/transactions', newTransactionRoutes);
