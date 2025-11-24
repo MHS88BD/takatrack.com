@@ -3,8 +3,8 @@ import { requestPasswordReset, verifyResetToken, resetPassword } from '../contro
 
 const router = express.Router();
 
-router.post('/forgot-password', requestPasswordReset);
-router.post('/verify-reset-token', verifyResetToken);
-router.post('/reset-password', resetPassword);
+router.post('/forgot-password', requestPasswordReset as any);
+router.post('/verify-reset-token', verifyResetToken as any);
+router.post('/reset-password', resetPassword as any);
 
 export default router;

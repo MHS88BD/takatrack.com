@@ -38,7 +38,18 @@ export const requestPasswordReset = async (
 
         // Generate reset token
         const resetToken = crypto.randomBytes(32).toString('hex');
-        const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+        const passwordResetToken = crypto
+            .createHash('sha256')
+            .update(resetToken)
+            .digest('hex');
+
+        // Log the token to console (for development/demo purposes)
+        console.log('========================================');
+        console.log('PASSWORD RESET REQUEST');
+        console.log('========================================');
+        console.log(`User: ${user.email}`);
+        console.log(`Reset Token: ${resetToken}`);
+        console.log('========================================');
 
         // Set expiration to 1 hour from now
         const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
@@ -55,7 +66,7 @@ export const requestPasswordReset = async (
         await prisma.passwordResetToken.create({
             data: {
                 user_id: user.id,
-                token: hashedToken,
+                token: passwordResetToken,
                 expires_at: expiresAt
             }
         });
@@ -92,7 +103,7 @@ export const requestPasswordReset = async (
             await prisma.passwordResetToken.deleteMany({
                 where: {
                     user_id: user.id,
-                    token: hashedToken
+                    token: passwordResetToken
                 }
             });
 
