@@ -47,7 +47,7 @@ export const requestPasswordReset = async (
         console.log('========================================');
         console.log('PASSWORD RESET REQUEST');
         console.log('========================================');
-        console.log(`User: ${user.email}`);
+        console.log(`User: ${user!.email}`);
         console.log(`Reset Token: ${resetToken}`);
         console.log('========================================');
 
@@ -57,7 +57,7 @@ export const requestPasswordReset = async (
         // Delete any existing unused tokens for this user
         await prisma.passwordResetToken.deleteMany({
             where: {
-                user_id: user.id,
+                user_id: user!.id,
                 used: false
             }
         });
@@ -65,7 +65,7 @@ export const requestPasswordReset = async (
         // Create new reset token
         await prisma.passwordResetToken.create({
             data: {
-                user_id: user.id,
+                user_id: user!.id,
                 token: passwordResetToken,
                 expires_at: expiresAt
             }
@@ -88,7 +88,7 @@ export const requestPasswordReset = async (
 
         try {
             await sendEmail({
-                email: user.email,
+                email: user!.email,
                 subject: 'Your password reset token (valid for 10 min)',
                 message,
                 html
@@ -102,7 +102,7 @@ export const requestPasswordReset = async (
             // If email sending fails, delete the token
             await prisma.passwordResetToken.deleteMany({
                 where: {
-                    user_id: user.id,
+                    user_id: user!.id,
                     token: passwordResetToken
                 }
             });

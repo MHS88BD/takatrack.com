@@ -234,27 +234,33 @@ function App() {
     const fetchWallets = async () => {
         try {
             const res = await axios.get(`${API_URL}/wallets`, config);
-            setWallets(res.data.data.wallets);
+            const walletsData = res.data?.data?.wallets || [];
+            setWallets(walletsData);
         } catch (error) {
             console.error('Failed to fetch wallets:', error);
+            setWallets([]); // Set to empty array on error to prevent crashes
         }
     };
 
     const fetchCategories = async () => {
         try {
             const res = await axios.get(`${API_URL}/transaction-categories`, config);
-            setCategories(res.data.data.categories);
+            const categoriesData = res.data?.data?.categories || [];
+            setCategories(categoriesData);
         } catch (error) {
             console.error('Failed to fetch categories:', error);
+            setCategories([]);
         }
     };
 
     const fetchTransactions = async () => {
         try {
             const res = await axios.get(`${API_URL}/transactions`, config);
-            setTransactions(res.data.data.transactions);
+            const transactionsData = res.data?.data?.transactions || [];
+            setTransactions(transactionsData);
         } catch (error) {
             console.error('Failed to fetch transactions:', error);
+            setTransactions([]);
         }
     };
 
@@ -270,9 +276,11 @@ function App() {
     const fetchLoans = async () => {
         try {
             const res = await axios.get(`${API_URL}/loans`, config);
-            setLoans(res.data.data.loans);
+            const loansData = res.data?.data?.loans || [];
+            setLoans(loansData);
         } catch (error) {
             console.error('Failed to fetch loans:', error);
+            setLoans([]);
         }
     };
 
