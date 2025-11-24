@@ -911,7 +911,7 @@ function App() {
                                         </div>
                                         <div className="wallet-info">
                                             <h3>{wallet.name}</h3>
-                                            <p>${wallet.balance.toFixed(2)}</p>
+                                            <p>${Number(wallet.balance).toFixed(2)}</p>
                                         </div>
                                     </div>
                                     <div className="wallet-card-footer">
@@ -1011,7 +1011,7 @@ function App() {
                                     </div>
                                     <div className="text-right">
                                         <p className={`font-bold ${t.type === 'INCOME' ? 'text-emerald-600' : 'text-red-600'}`}>
-                                            {t.type === 'INCOME' ? '+' : '-'}${t.amount.toFixed(2)}
+                                            {t.type === 'INCOME' ? '+' : '-'}${Number(t.amount).toFixed(2)}
                                         </p>
                                         <p className="text-xs text-muted">{t.wallet?.name}</p>
                                     </div>
@@ -1084,7 +1084,7 @@ function App() {
                                                     {loan.status}
                                                 </span>
                                             </div>
-                                            <p className="text-2xl font-bold my-2">${loan.amount.toFixed(2)}</p>
+                                            <p className="text-2xl font-bold my-2">${Number(loan.amount).toFixed(2)}</p>
                                             <div className="text-sm text-muted">
                                                 Due: {new Date(loan.date).toLocaleDateString()}
                                             </div>
