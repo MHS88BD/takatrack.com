@@ -3,6 +3,7 @@ import { prisma } from '../app';
 import { AppError } from '../utils/AppError';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
+import { sendEmail } from '../utils/email';
 
 // Request password reset
 export const requestPasswordReset = async (
@@ -59,20 +60,45 @@ export const requestPasswordReset = async (
             }
         });
 
-        // Log token to console (for admin to provide to user)
-        console.log('\n========================================');
-        console.log('PASSWORD RESET REQUEST');
-        console.log('========================================');
-        console.log(`User: ${user.email}`);
-        console.log(`Phone: ${user.phone || 'N/A'}`);
-        console.log(`Reset Token: ${resetToken}`);
-        console.log(`Expires: ${expiresAt.toLocaleString()}`);
-        console.log('========================================\n');
+        // Send email
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
 
-        res.status(200).json({
-            status: 'success',
-            message: 'Reset token has been generated. Please check with administrator.'
-        });
+        const message = `Forgot your password? Submit a PATCH request with your new password and passwordConfirm to: ${resetUrl}.\nIf you didn't forget your password, please ignore this email!`;
+        const html = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2>Password Reset Request</h2>
+                <p>You requested a password reset. Click the link below to reset your password:</p>
+                <a href="${resetUrl}" style="display: inline-block; padding: 10px 20px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 5px;">Reset Password</a>
+                <p>If you didn't request this, please ignore this email.</p>
+                <p>This link is valid for 1 hour.</p>
+            </div>
+        `;
+
+        try {
+            await sendEmail({
+                email: user.email,
+                subject: 'Your password reset token (valid for 10 min)',
+                message,
+                html
+            });
+
+            res.status(200).json({
+                status: 'success',
+                message: 'Token sent to email!'
+            });
+        } catch (err) {
+            // If email sending fails, delete the token
+            await prisma.passwordResetToken.deleteMany({
+                where: {
+                    user_id: user.id,
+                    token: hashedToken
+                }
+            });
+
+            console.error('Email send error:', err);
+            return next(new AppError('There was an error sending the email. Try again later!', 500));
+        }
     } catch (error) {
         next(error);
     }

@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { Wallet, Plus, Trash2, Edit2, X, CreditCard, Banknote, Menu, BarChart3, ArrowRightLeft, TrendingUp, Download, FileText, ChevronLeft, ChevronRight, Bell } from 'lucide-react';
+import { Wallet, Plus, Trash2, Edit2, X, CreditCard, Banknote, Menu, BarChart3, ArrowRightLeft, TrendingUp, Download, FileText, ChevronLeft, ChevronRight, Bell, Users, Activity, PieChart } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
 import axios from 'axios';
 import './App.css';
 import LandingPage from './components/LandingPage';
@@ -111,12 +112,12 @@ function App() {
     });
 
     // Reports state
-    // const [monthlyStats, setMonthlyStats] = useState<any[]>([]);
-    // const [categoryStats, setCategoryStats] = useState<any[]>([]);
+    const [monthlyStats, setMonthlyStats] = useState<any[]>([]);
+    const [categoryStats, setCategoryStats] = useState<any[]>([]);
 
     // Admin state
-    // const [adminStats, setAdminStats] = useState<any>(null);
-    // const [users, setUsers] = useState<any[]>([]);
+    const [adminStats, setAdminStats] = useState<any>(null);
+    const [users, setUsers] = useState<any[]>([]);
 
 
     useEffect(() => {
@@ -126,15 +127,27 @@ function App() {
             fetchTransactions();
             // fetchStats();
             fetchLoans();
-            // fetchReports();
+            fetchReports();
         }
     }, [isLoggedIn, token]);
 
     useEffect(() => {
         if (isLoggedIn && token && role === 'ADMIN' && currentPage === 'admin') {
-            // fetchAdminData();
+            fetchAdminData();
         }
     }, [isLoggedIn, token, role, currentPage]);
+
+    // Check for reset token in URL
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tokenFromUrl = urlParams.get('token');
+        if (tokenFromUrl) {
+            setResetToken(tokenFromUrl);
+            setIsResetPasswordModalOpen(true);
+            // Clean URL
+            window.history.replaceState(null, '', window.location.pathname);
+        }
+    }, []);
 
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
@@ -198,13 +211,18 @@ function App() {
 
     useEffect(() => {
         if (isLoggedIn) {
+            // Clear hash from URL to prevent scrolling/navigation issues
+            if (window.location.hash) {
+                window.history.replaceState(null, '', window.location.pathname);
+            }
+
             fetchWallets();
             fetchCategories();
             fetchTransactions();
             // fetchStats();
             fetchLoans();
             if (role === 'ADMIN') {
-                // fetchAdminData();
+                fetchAdminData();
             }
         }
     }, [isLoggedIn]);
@@ -258,28 +276,28 @@ function App() {
         }
     };
 
-    // const fetchAdminData = async () => {
-    //     try {
-    //         const statsRes = await axios.get(`${API_URL}/admin/stats`, config);
-    //         setAdminStats(statsRes.data.data.stats);
-    //         const usersRes = await axios.get(`${API_URL}/admin/users`, config);
-    //         setUsers(usersRes.data.data.users);
-    //     } catch (error) {
-    //         console.error('Failed to fetch admin data:', error);
-    //     }
-    // };
+    const fetchAdminData = async () => {
+        try {
+            const statsRes = await axios.get(`${API_URL}/admin/stats`, config);
+            setAdminStats(statsRes.data.data.stats);
+            const usersRes = await axios.get(`${API_URL}/admin/users`, config);
+            setUsers(usersRes.data.data.users);
+        } catch (error) {
+            console.error('Failed to fetch admin data:', error);
+        }
+    };
 
-    // const fetchReports = async () => {
-    //     try {
-    //         const monthlyRes = await axios.get(`${API_URL}/reports/monthly`, config);
-    //         setMonthlyStats(monthlyRes.data.data.monthlyData);
-    //
-    //         const categoryRes = await axios.get(`${API_URL}/reports/category?type=EXPENSE`, config);
-    //         setCategoryStats(categoryRes.data.data.stats);
-    //     } catch (error) {
-    //         console.error('Failed to fetch reports:', error);
-    //     }
-    // };
+    const fetchReports = async () => {
+        try {
+            const monthlyRes = await axios.get(`${API_URL}/reports/monthly`, config);
+            setMonthlyStats(monthlyRes.data.data.monthlyData);
+
+            const categoryRes = await axios.get(`${API_URL}/reports/category?type=EXPENSE`, config);
+            setCategoryStats(categoryRes.data.data.stats);
+        } catch (error) {
+            console.error('Failed to fetch reports:', error);
+        }
+    };
 
     // Export functions
     const handleExportCSV = async (type: 'transactions' | 'wallets' | 'loans' | 'categories') => {
@@ -330,10 +348,10 @@ function App() {
             await axios.post(`${API_URL}/auth/forgot-password`, {
                 emailOrPhone: forgotPasswordEmail
             });
-            alert('Password reset request submitted. Please contact administrator for reset token.');
+            alert('Password reset link sent to your email. Please check your inbox.');
             setIsForgotPasswordModalOpen(false);
             setForgotPasswordEmail('');
-            setIsResetPasswordModalOpen(true);
+            // Do not open reset password modal immediately
         } catch (error: any) {
             alert(error.response?.data?.message || 'Failed to request password reset');
         } finally {
@@ -373,25 +391,25 @@ function App() {
     };
 
 
-    // const handleToggleUserStatus = async (userId: string) => {
-    //     if (!confirm('Are you sure you want to change this user\'s status?')) return;
-    //     try {
-    //         await axios.patch(`${API_URL}/admin/users/${userId}/toggle-status`, {}, config);
-    //         fetchAdminData();
-    //     } catch (error: any) {
-    //         alert('Failed: ' + (error.response?.data?.message || error.message));
-    //     }
-    // };
+    const handleToggleUserStatus = async (userId: string) => {
+        if (!confirm('Are you sure you want to change this user\'s status?')) return;
+        try {
+            await axios.patch(`${API_URL}/admin/users/${userId}/toggle-status`, {}, config);
+            fetchAdminData();
+        } catch (error: any) {
+            alert('Failed: ' + (error.response?.data?.message || error.message));
+        }
+    };
 
-    // const handleDeleteUser = async (userId: string) => {
-    //     if (!confirm('WARNING: This will delete the user and ALL their data. This cannot be undone. Continue?')) return;
-    //     try {
-    //         await axios.delete(`${API_URL}/admin/users/${userId}`, config);
-    //         fetchAdminData();
-    //     } catch (error: any) {
-    //         alert('Failed: ' + (error.response?.data?.message || error.message));
-    //     }
-    // };
+    const handleDeleteUser = async (userId: string) => {
+        if (!confirm('WARNING: This will delete the user and ALL their data. This cannot be undone. Continue?')) return;
+        try {
+            await axios.delete(`${API_URL}/admin/users/${userId}`, config);
+            fetchAdminData();
+        } catch (error: any) {
+            alert('Failed: ' + (error.response?.data?.message || error.message));
+        }
+    };
 
     const handleAddWallet = () => {
         setEditingWallet(null);
@@ -1075,22 +1093,193 @@ function App() {
                 )}
 
                 {currentPage === 'reports' && (
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-center py-20">
-                        <BarChart3 className="w-16 h-16 mx-auto text-slate-300 mb-4" />
-                        <h2 className="text-xl font-bold text-slate-700">Analytics Coming Soon</h2>
-                        <p className="text-muted">Detailed reports and charts are under development.</p>
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Monthly Income vs Expense */}
+                            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                                    <BarChart3 className="text-emerald-500" size={20} />
+                                    Monthly Overview
+                                </h3>
+                                <div className="h-80">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={monthlyStats}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                            <XAxis dataKey="month" />
+                                            <YAxis />
+                                            <Tooltip
+                                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                            />
+                                            <Legend />
+                                            <Bar dataKey="income" name="Income" fill="#10b981" radius={[4, 4, 0, 0]} />
+                                            <Bar dataKey="expense" name="Expense" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+
+                            {/* Expense by Category */}
+                            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                                    <PieChart className="text-blue-500" size={20} />
+                                    Expense by Category
+                                </h3>
+                                <div className="h-80">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <RechartsPieChart>
+                                            <Pie
+                                                data={categoryStats}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={60}
+                                                outerRadius={100}
+                                                paddingAngle={5}
+                                                dataKey="value"
+                                            >
+                                                {categoryStats.map((_, index) => (
+                                                    <Cell key={`cell-${index}`} fill={['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'][index % 6]} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip />
+                                            <Legend />
+                                        </RechartsPieChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Recent Transactions Table for Reports */}
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                            <h3 className="text-lg font-bold mb-4">Financial Summary</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-100">
+                                    <p className="text-sm text-emerald-600 font-medium">Total Income (YTD)</p>
+                                    <p className="text-2xl font-bold text-emerald-700">
+                                        ${monthlyStats.reduce((acc, curr) => acc + curr.income, 0).toFixed(2)}
+                                    </p>
+                                </div>
+                                <div className="p-4 bg-red-50 rounded-lg border border-red-100">
+                                    <p className="text-sm text-red-600 font-medium">Total Expense (YTD)</p>
+                                    <p className="text-2xl font-bold text-red-700">
+                                        ${monthlyStats.reduce((acc, curr) => acc + curr.expense, 0).toFixed(2)}
+                                    </p>
+                                </div>
+                                <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                                    <p className="text-sm text-blue-600 font-medium">Net Savings (YTD)</p>
+                                    <p className="text-2xl font-bold text-blue-700">
+                                        ${(monthlyStats.reduce((acc, curr) => acc + curr.income, 0) - monthlyStats.reduce((acc, curr) => acc + curr.expense, 0)).toFixed(2)}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
 
                 {currentPage === 'admin' && role === 'ADMIN' && (
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                        <h2 className="text-xl font-bold mb-6">Admin Panel</h2>
-                        <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                            <h3 className="font-semibold mb-2">System Status</h3>
-                            <div className="flex gap-4 text-sm">
-                                <div className="flex items-center gap-2"><div className="w-2 h-2 bg-green-500 rounded-full"></div> Database: Connected</div>
-                                <div className="flex items-center gap-2"><div className="w-2 h-2 bg-green-500 rounded-full"></div> API: Online</div>
-                                <div className="flex items-center gap-2"><div className="w-2 h-2 bg-green-500 rounded-full"></div> Version: 3.0.0</div>
+                    <div className="space-y-6">
+                        {/* Admin Stats */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
+                                <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center">
+                                    <Users size={24} />
+                                </div>
+                                <div>
+                                    <p className="text-sm text-muted">Total Users</p>
+                                    <p className="text-2xl font-bold">{adminStats?.totalUsers || 0}</p>
+                                </div>
+                            </div>
+                            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
+                                <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center">
+                                    <Activity size={24} />
+                                </div>
+                                <div>
+                                    <p className="text-sm text-muted">Active Users</p>
+                                    <p className="text-2xl font-bold">{adminStats?.activeUsers || 0}</p>
+                                </div>
+                            </div>
+                            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
+                                <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center">
+                                    <ArrowRightLeft size={24} />
+                                </div>
+                                <div>
+                                    <p className="text-sm text-muted">Transactions</p>
+                                    <p className="text-2xl font-bold">{adminStats?.totalTransactions || 0}</p>
+                                </div>
+                            </div>
+                            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
+                                <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center">
+                                    <Wallet size={24} />
+                                </div>
+                                <div>
+                                    <p className="text-sm text-muted">Total Wallets</p>
+                                    <p className="text-2xl font-bold">{adminStats?.totalWallets || 0}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* User Management Table */}
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div className="p-6 border-b border-slate-100">
+                                <h2 className="text-xl font-bold">User Management</h2>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-slate-50">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">User</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Role</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Joined</th>
+                                            <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {users.map((user) => (
+                                            <tr key={user.id} className="hover:bg-slate-50">
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="flex items-center">
+                                                        <div className="h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold mr-3">
+                                                            {user.email.charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-sm font-medium text-slate-900">{user.email}</div>
+                                                            <div className="text-xs text-muted">ID: {user.id.substring(0, 8)}...</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-slate-100 text-slate-800'}`}>
+                                                        {user.role}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                        {user.is_active ? 'Active' : 'Inactive'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                                                    {new Date(user.created_at).toLocaleDateString()}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                    <button
+                                                        onClick={() => handleToggleUserStatus(user.id)}
+                                                        className={`text-xs px-3 py-1 rounded-md mr-2 ${user.is_active ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}
+                                                    >
+                                                        {user.is_active ? 'Deactivate' : 'Activate'}
+                                                    </button>
+                                                    {user.role !== 'ADMIN' && (
+                                                        <button
+                                                            onClick={() => handleDeleteUser(user.id)}
+                                                            className="text-slate-400 hover:text-red-600"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
@@ -1109,7 +1298,7 @@ function App() {
                             </div>
 
                             <p className="text-sm text-muted mb-4">
-                                Enter your email or phone number. An administrator will provide you with a reset token.
+                                Enter your email. We will send you a verification link to reset your password.
                             </p>
 
                             <form onSubmit={handleForgotPassword} className="space-y-4">
@@ -1157,7 +1346,7 @@ function App() {
                             </div>
 
                             <p className="text-sm text-muted mb-4">
-                                Enter the reset token provided by the administrator and your new password.
+                                Enter your new password below.
                             </p>
 
                             <form onSubmit={handleResetPassword} className="space-y-4">
