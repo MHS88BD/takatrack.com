@@ -1,12 +1,19 @@
-# আমার অটো (Amar Auto) — Production PostgreSQL Data Model (Prisma)
+# আমার অটো (Amar Auto) — Production Data Model (Prisma)
+
+> **⚙️ FINAL DB = MySQL/MariaDB** (see [07-decisions-and-deployment.md](07-decisions-and-deployment.md)). Schema below is provider-agnostic Prisma; only the datasource `provider` and 4 Postgres-only tricks change:
+> - **RLS** (tenant backstop) → not in MySQL → enforce via Prisma middleware only.
+> - **`EXCLUDE USING gist`** (double-booking) → app-layer `SELECT … FOR UPDATE` overlap check.
+> - **partial unique index** (`WHERE endDate IS NULL`) → app-layer active-assignment check.
+> - **`LocationPing` / TimescaleDB** → **removed**: GPS comes from owner's external GPS server API; store only `Vehicle.gpsDeviceId` + `gpsProvider`, no raw pings.
+> Use InnoDB + `utf8mb4`. `@db.Decimal` for money works natively.
 
 ```prisma
 // ============================================================
 // datasource & generator
 // ============================================================
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "mysql"          // FINAL: MySQL/MariaDB (was "postgresql")
+  url      = env("DATABASE_URL")   // mysql://user:pass@host:3306/amarauto
 }
 
 generator client {
@@ -1087,7 +1094,7 @@ model AuditLog {
 Every tenant-scoped table carries a non-null `organizationId` FK to `Organization` with `onDelete: Cascade`. This is the single tenant boundary — an owner account *is* a tenant, and multiple staff logins (`User` rows with `OWNER`/`MANAGER`/`ACCOUNTANT`) live under one org.
 
 Enforcement layers, in order of trust:
-- **Row-Level Security (recommended in production).** Add a Postgres RLS policy `USING (organization_id = current_setting('app.current_org')::text)` on every tenant table; the app sets `SET app.current_org = $orgId` per request/transaction. Prisma does not emit RLS, so ship it as a raw migration. This makes cross-tenant leakage impossible even if an app query forgets a `where`.
+- **Tenant isolation (MySQL — no RLS).** MySQL has no Row-Level Security, so the **Prisma middleware/client-extension is the single enforcement layer**: it auto-injects `organizationId` into every `where`/`create`. Discipline + code review required — a query that bypasses the extension can leak across tenants. (Postgres RLS `USING (organization_id = current_setting('app.current_org'))` was the original backstop; on MySQL it's gone, so guard the extension carefully and add integration tests for cross-tenant reads.)
 - **App layer.** A Prisma middleware/extension injects `organizationId` into every `where` and `data`, so developers can't accidentally omit it.
 - **Composite uniqueness is always org-scoped** — `@@unique([organizationId, registrationNo])`, `@@unique([organizationId, phone])`, etc. Two different tenants can reuse the same vehicle plate or phone; uniqueness only holds inside a tenant.
 - **Every hot-path index is composite and org-first** (`@@index([organizationId, vehicleId, collectionDate])`). Org-first ordering keeps a tenant's rows physically clustered in the index and lets every dashboard query prune to one tenant immediately.
@@ -1133,8 +1140,8 @@ Everything that costs money carries a `vehicleId`, so per-vehicle isolation is a
 The operational number is the denormalized cache for speed; the ledger is the source of truth for accountants. In production a posting service writes both in one transaction so they can't diverge.
 
 ### Production notes worth flagging
-- **`LocationPing`** is the only high-write, high-volume table (100+ vehicles × ping/10s). Model it as a **declaratively partitioned** table (monthly range partitions on `recordedAt`) or move it to Timescale; keep only `GpsTrip` summaries in the relational hot path. `BigInt` PK is intentional.
-- **Double-booking prevention**: add a Postgres `EXCLUDE USING gist` constraint on `bookings(vehicle_id WITH =, tstzrange(start_date_time, end_date_time) WITH &&)` via raw migration — Prisma can't express range-overlap exclusion.
+- **`LocationPing` — REMOVED (MySQL + external GPS).** GPS telemetry comes from the owner's own GPS server API, so no raw pings are stored here. Keep only `Vehicle.gpsDeviceId` + `gpsProvider` mapping and (optionally) small `GpsTrip`/geofence summaries. Live positions are cached in Redis (short TTL), not the DB. See [07-decisions-and-deployment.md](07-decisions-and-deployment.md) §2.
+- **Double-booking prevention (MySQL)**: no `EXCLUDE USING gist`. Enforce in the booking service with a transaction + `SELECT … FOR UPDATE` on the vehicle's overlapping bookings, rejecting any time-range overlap for the same `vehicleId`.
 - **One active assignment per vehicle**: enforce with a partial unique index `CREATE UNIQUE INDEX ON driver_assignments(vehicle_id) WHERE end_date IS NULL`.
 - All money is `@db.Decimal` with fixed scale; all money defaults are `0`, not null, to keep aggregates branch-free.
 - Documents/service reminders are scanned by a cron over `@@index([organizationId, expiryDate])` / `nextServiceDueDate`, emitting `SmsLog` + push rows; `reminderSent` prevents duplicate sends.

@@ -1,5 +1,7 @@
 # Amar Auto Clone — Tech Stack, Architecture & Phased Roadmap
 
+> **⚙️ FINAL overrides (2026-07-11, see [07-decisions-and-deployment.md](07-decisions-and-deployment.md)):** DB = **MySQL/MariaDB** (not Postgres; tenant isolation via Prisma middleware, no RLS). GPS = **owner's external GPS server API via an adapter** (no self-ingest, no TimescaleDB, no raw-ping storage; Redis short-TTL cache for live). Hosting = **Contabo Cloud VPS 10 + CloudPanel, Singapore**. Where the text below says Postgres/TimescaleDB/Hetzner-DO, read the override.
+
 ## Guiding principle
 Everything the ad promises is **one vehicle-agnostic double-entry accounting core** with vertical presets on top. Build the core ledger + multi-tenancy correctly once; GPS, inventory, rental, charging are all just modules writing into that same `Transaction`/`Ledger` spine. Reuse the owner's existing Node/TS/Prisma/PostgreSQL/React muscle memory — do not introduce a second language on the backend.
 
@@ -43,7 +45,7 @@ Keep this **decoupled from the accounting API** — different scaling profile (h
 - **Ingestion service:** a separate lightweight Node/Fastify (or Go if throughput demands) listener. Two integration modes:
   1. **Pull/proxy from Autonemo's API** (fastest path — the product literally partners with Autonemo GPS): poll their device API or receive their webhooks, normalize to your `LocationPing` shape.
   2. **Direct TCP protocol server** (if you own devices): most Chinese trackers speak **GT06 / JT808 / Concox** protocols over raw TCP. Use **Traccar** (open-source GPS server, supports 200+ protocols) as your ingestion layer and read from its DB/API — this saves you writing protocol parsers. Highly recommended.
-- **Storage:** time-series data → **TimescaleDB** (a Postgres extension, so same DB engine, same Prisma-adjacent tooling) hypertable for `LocationPing`. Don't put 10-second pings in your transactional tables.
+- **Storage / GPS:** *(override)* GPS telemetry is **not stored** — it's fetched live from the owner's external GPS server API through a `GpsProvider` adapter and cached in Redis (short TTL). No `LocationPing`, no TimescaleDB. Only `Vehicle.gpsDeviceId`/`gpsProvider` mapping + optional trip/geofence summaries live in MySQL.
 - **Live delivery to app:** **WebSocket** (or MQTT via EMQX if you want device-grade pub/sub) pushing last-known positions; app subscribes only to the vehicles on screen. Compute geofence/overspeed/ignition alerts in a stream consumer, write `Reminder`/`Alert` rows, fan out push+SMS.
 
 ### File / PDF / Excel export
@@ -60,7 +62,7 @@ Keep this **decoupled from the accounting API** — different scaling profile (h
 
 ### Hosting / VPS
 - **Users are in Bangladesh → latency matters.** Best price/performance/latency: a VPS in **Singapore** (DigitalOcean SGP1, Linode/Akamai SG, or **AWS ap-southeast-1**) — ~30-60ms to BD, far cheaper and more reliable than most local hosts. For lowest possible latency/BDIX peering you could use a local provider (**ExonHost, Dhaka Colo, XeoNBD**) but reliability is uneven — start regional, add a BD edge/CDN later.
-- **Low-cost concrete setup:** one **Hetzner (EU) or DigitalOcean SGP** VPS (4 vCPU / 8GB) running **Docker Compose**: app API, GPS ingestion, Postgres (+ Timescale), Redis, Gotenberg, Nginx/Caddy (auto-TLS). Add **BunnyCDN or Cloudflare** in front (both cheap, good BD presence) for static/web + the marketplace/receipt assets.
+- **Low-cost concrete setup *(override)*:** **Contabo Cloud VPS 10** (4 vCPU / 8GB / 75GB NVMe, **Singapore**) managed by **CloudPanel**: a Node.js site for the NestJS API + a static/Node site for the React web (both nginx + Let's Encrypt), **MySQL** via CloudPanel, plus **Redis** and **Gotenberg (Docker)** installed on the box. BullMQ worker as a separate PM2 process. Static sites + VPN already run on this box (~5.5GB RAM free). Optional Cloudflare in front. Full guide: [07-decisions-and-deployment.md](07-decisions-and-deployment.md) §3.
 - **Object storage:** Cloudflare R2 or Backblaze B2 (no egress fees) instead of S3.
 - Scale path: split GPS ingestion + Postgres to their own boxes; move to managed Postgres when revenue justifies. Don't over-engineer with Kubernetes early.
 - **Backups:** nightly `pg_dump` + WAL archiving to R2/B2; this maps to the product's "encrypted cloud backup" promise.
@@ -87,12 +89,12 @@ Keep this **decoupled from the accounting API** — different scaling profile (h
 
 ```
 [RN/Expo App] ─┐                          ┌─ BullMQ Workers (SMS, PDF, invoices, reminders)
-[React Web]  ──┼─ REST API (NestJS) ──────┼─ Postgres + TimescaleDB (single tenant-scoped DB, RLS)
-[Admin panel]─┘        │  │  │             ├─ Redis (OTP, cache, queues)
+[React Web]  ──┼─ REST API (NestJS) ──────┼─ MySQL/MariaDB (single tenant-scoped DB, Prisma-middleware isolation)
+[Admin panel]─┘        │  │  │             ├─ Redis (OTP, cache, queues, GPS live-position cache)
                        │  │  └─ PaymentProvider → bKash PGW
                        │  └──── SmsProvider → SSL Wireless / fallback
-                       └─ WebSocket gateway (live positions/alerts)
-[GPS Devices] → Traccar / Autonemo API → GPS Ingestion svc → TimescaleDB → stream consumer (geofence/overspeed) → Alerts
+                       └─ WebSocket/poll gateway (live positions/alerts)
+[Owner's GPS server] ← GpsProvider adapter (getLive/getBulk/getHistory) ← REST API   (no raw-ping storage; Redis cache)
 [Gotenberg] ← PDF/PNG receipts → R2/B2 object storage → signed shareable links
 ```
 
@@ -132,7 +134,7 @@ Deliverable: an owner can run daily collections, track driver dues, manage vehic
 - Harden **offline sync** across all entry types.
 
 ### **Phase 3 — Platform + hardware + verticals (≈10–16 weeks, parallelizable)**
-- **Live GPS**: Traccar/Autonemo ingestion, TimescaleDB, WebSocket live map (100+ vehicles, clustering), trip history/playback, geofence/overspeed/ignition **alerts**, tracker-to-vehicle mapping, **hardware order flow** (order→call→install→live, COD).
+- **Live GPS**: `GpsProvider` adapter over the **owner's own GPS server API** (no ingestion service, no TimescaleDB), Redis-cached live/bulk positions, WebSocket/poll live map (100+ vehicles, clustering), trip history/playback via provider, geofence/overspeed/ignition **alerts** (from provider or computed), tracker-to-vehicle mapping, **hardware order flow** (order→call→install→live, COD).
 - **Inventory & parts**: stock, suppliers/credit, purchase/sale invoices, reorder & dead-stock reports.
 - **Loans/installments/HP**, **party ledger** (paona/dena/advance), **charging station** module, **bus-association fund/member/route** accounting.
 - **Auto marketplace** with admin moderation.
@@ -166,7 +168,7 @@ Deliverable: an owner can run daily collections, track driver dues, manage vehic
 
 ## Key risks to design around early (don't defer)
 1. **Offline sync correctness on money** — solve via append-only ledger + client UUIDs from day one.
-2. **Multi-tenant isolation** — Prisma middleware + Postgres RLS, both.
+2. **Multi-tenant isolation** — MySQL has no RLS, so the **Prisma middleware is the ONLY backstop**: harden it, ban raw queries that skip it, add cross-tenant integration tests.
 3. **OTP deliverability** — dual SMS provider failover; it's a top churn/signup-failure cause in BD.
 4. **Bengali rendering everywhere** including PDFs — bundle fonts, test complex-script shaping on real low-end Android devices.
-5. **GPS scaling** — keep it a separate service + TimescaleDB from the start; never mix 10-second pings into transactional tables.
+5. **GPS integration** — consume the owner's external GPS server via the `GpsProvider` adapter; cache live positions in Redis (short TTL) so the map doesn't hammer the provider; never store raw pings in MySQL.

@@ -8,6 +8,18 @@
 
 ---
 
+## ⚙️ ফাইনাল টেক সিদ্ধান্ত (২০২৬-০৭-১১ — override)
+
+> নিচে/অন্য ডকে PostgreSQL/TimescaleDB/Hetzner লেখা থাকলে **এই সিদ্ধান্ত জেতে।** পূর্ণ ডিটেইল → [docs/07-decisions-and-deployment.md](docs/07-decisions-and-deployment.md)।
+
+| বিষয় | ফাইনাল | নোট |
+|---|---|---|
+| **Database** | **MySQL / MariaDB** (Postgres না) | CloudPanel native; Postgres-only ৪টা feature (RLS, exclusion, partial-index) app-code-এ handle |
+| **GPS** | **External provider API** (owner-এর নিজের GPS server) | নিজে ingest/TimescaleDB বানাবো না; adapter দিয়ে consume; ping DB-তে রাখবো না |
+| **Hosting** | **Contabo Cloud VPS 10 + CloudPanel** (Singapore) | 4 vCPU/8GB/75GB NVMe; static site+VPN পাশে চলবে; ~৫.৫GB RAM ফাঁকা |
+
+---
+
 ## ০. বিস্তারিত ডকের ইনডেক্স
 
 গভীর ডিটেইল আলাদা ফাইলে (এই প্ল্যান = সারাংশ + রোডম্যাপ):
@@ -16,9 +28,10 @@
 |---|---|
 | [docs/01-PRD-full-build-spec.md](docs/01-PRD-full-build-spec.md) | পূর্ণ PRD — ফিচার, রোল, ডেটা মডেল, API, স্ট্যাক, মনিটাইজেশন, বিজনেস লজিক (মাস্টার) |
 | [docs/02-feature-inventory.md](docs/02-feature-inventory.md) | সব পেজ থেকে বের করা deduplicated ফিচার + entity ইনভেন্টরি |
-| [docs/03-data-model-prisma.md](docs/03-data-model-prisma.md) | প্রোডাকশন PostgreSQL/Prisma স্কিমা (৪০+ টেবিল) |
+| [docs/03-data-model-prisma.md](docs/03-data-model-prisma.md) | প্রোডাকশন Prisma স্কিমা (৪০+ টেবিল) — **MySQL provider**, docs/07 দ্রষ্টব্য |
 | [docs/04-rest-api-spec.md](docs/04-rest-api-spec.md) | মোবাইল অ্যাপ যে REST API খাবে — endpoint by endpoint |
 | [docs/05-architecture-and-roadmap.md](docs/05-architecture-and-roadmap.md) | টেক স্ট্যাক, আর্কিটেকচার, ফেজ রোডম্যাপ + এস্টিমেট |
+| [docs/07-decisions-and-deployment.md](docs/07-decisions-and-deployment.md) | **ফাইনাল সিদ্ধান্ত** — MySQL + external GPS + Contabo/CloudPanel deploy গাইড (authoritative) |
 | [docs/06-ui-ux-and-design-system.md](docs/06-ui-ux-and-design-system.md) | সম্পূর্ণ UI/UX — মোবাইল স্ক্রিন, ওয়েব ড্যাশবোর্ড, অ্যাডমিন প্যানেল, ডিজাইন সিস্টেম |
 
 ---
@@ -86,15 +99,16 @@ Auth: **phone+OTP primary**; PIN/password device convenience; JWT (access 15min 
 | স্তর | পছন্দ | কেন |
 |---|---|---|
 | Backend | **NestJS (Node+TS)** | মডুলার, owner-এর existing Node/TS দক্ষতা |
-| ORM/DB | **Prisma + PostgreSQL** | Decimal money, RLS multi-tenancy |
+| ORM/DB | **Prisma + MySQL/MariaDB** (InnoDB, utf8mb4) | CloudPanel native; Decimal money; tenant isolation = Prisma middleware (RLS নাই) |
 | Auth/OTP | roll-your-own OTP (Redis) + SSL Wireless/BD SMS gateway | বাংলা SMS copy নিয়ন্ত্রণ, সস্তা |
 | Web front | **React + Vite + TanStack Query + Tailwind + shadcn/ui** | দ্রুত, owner-এর React স্ট্যাক |
 | Mobile | **React Native + Expo** (Android-first, পরে iOS) | কোড শেয়ার, দ্রুত, offline সাপোর্ট |
-| GPS ingest | আলাদা service + **TimescaleDB** (Traccar/Autonemo style) | ১০s ping transactional DB-তে মেশানো যাবে না |
+| GPS | **External provider adapter** — owner-এর নিজের GPS server API | নিজে ingest/TimescaleDB না; Redis cache দিয়ে live position |
 | PDF/Excel | **Gotenberg** (রসিদ PDF, বাংলা font embed) | shareable রসিদ |
 | পেমেন্ট | **bKash PGW** (পরে Nagad/Rocket) | postpaid বিল |
 | ব্যাকগ্রাউন্ড job | **BullMQ** cron (SMS, বিল, reminder, GPS alert) | reminder/reconciliation |
-| Hosting | VPS (owner-এর existing VPS ইকোসিস্টেম) | খরচ কম |
+| Redis | OTP store, cache, BullMQ, GPS position cache | VPS-এ install |
+| Hosting | **Contabo Cloud VPS 10 + CloudPanel** (Singapore) | 4 vCPU/8GB/75GB; static site+VPN পাশে |
 
 আর্কিটেকচার ডিটেইল → [docs/05](docs/05-architecture-and-roadmap.md)।
 
@@ -131,7 +145,7 @@ freemium hook + একজন মালিকের দৈনিক অপার�
 - push notification, offline sync সব entry-তে
 
 ### Phase 3 — প্ল্যাটফর্ম + হার্ডওয়্যার + ভার্টিক্যাল (≈১০–১৬ সপ্তাহ, parallel) 🚀
-- **Live GPS** (Traccar/Autonemo, TimescaleDB, WebSocket map, trip playback, geofence/overspeed/ignition alert, hardware order flow)
+- **Live GPS** (owner-এর GPS server API adapter, WebSocket/poll map, trip playback, geofence/overspeed/ignition alert — provider থেকে/compute, hardware order flow)
 - ইনভেন্টরি ও পার্টস (stock, সরবরাহকারী credit, invoice, reorder/dead-stock)
 - loan/installment/HP, party ledger, চার্জিং স্টেশন, বাস সমিতি fund
 - অটো মার্কেটপ্লেস (admin moderation)
@@ -164,7 +178,7 @@ freemium hook + একজন মালিকের দৈনিক অপার�
 - **ড্রাইভার বকেয়া:** `shortfall = max(0, dailyTarget − collected − discount)`; `dailyTarget` entry-এর সময় snapshot (পরে টার্গেট বদলালে history বদলায় না); over-deposit হলে পুরনো dues-এ FIFO apply; live outstanding লাল রঙে → SMS। **zero manual arithmetic।**
 - **P&L দুই স্তর:** (a) fast per-vehicle operational number (`GROUP BY vehicleId`), (b) authoritative double-entry ledger (`Σdebit=Σcredit`, trial balance)। এক transaction-এ দুটোই লেখা হয় যাতে diverge না করে।
 - **Offline money correctness:** প্রতি record client-UUID + sync queue; ledger **append-only immutable** (collection edit করো না, correcting entry পোস্ট করো)।
-- **GPS ingest decoupled:** আলাদা service, TimescaleDB, raw ping relational DB-তে না।
+- **GPS external:** owner-এর GPS server API (adapter) থেকে live/history; raw ping DB-তে রাখবো না; Redis-এ short-TTL cache। ডিটেইল docs/07।
 
 সব লজিক → [docs/01](docs/01-PRD-full-build-spec.md) সেকশন ৯।
 

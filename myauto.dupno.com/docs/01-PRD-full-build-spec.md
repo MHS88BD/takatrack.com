@@ -2,6 +2,12 @@
 
 > Master build document for **আমার অটো (Amar Auto)** — a Bengali-first, multi-tenant vehicle & fleet accounting SaaS (web + API first, then mobile). Audience: the developer/owner building it. This is the single source of truth: product, features, roles, data model, API surface, stack, monetization, roadmap, and business logic.
 
+> **⚙️ FINAL TECH OVERRIDES (2026-07-11) — authoritative, see [07-decisions-and-deployment.md](07-decisions-and-deployment.md):**
+> - **Database = MySQL/MariaDB** (InnoDB, utf8mb4), **not PostgreSQL**. No RLS → tenant isolation is the Prisma middleware alone. No `EXCLUDE USING gist` → double-booking checked in app (`SELECT … FOR UPDATE`). No partial unique index → active-assignment checked in app.
+> - **GPS = the owner's own external GPS server API** via a `GpsProvider` adapter. **No self-ingest, no TimescaleDB, no `LocationPing` raw-ping storage.** Store only `Vehicle.gpsDeviceId` + `gpsProvider`; cache live positions in Redis (short TTL).
+> - **Hosting = Contabo Cloud VPS 10 + CloudPanel (Singapore).**
+> Wherever the text below says Postgres / TimescaleDB / RLS / Hetzner-DO, the override wins.
+
 ---
 
 ## 1. Product Overview & Positioning
@@ -226,20 +232,20 @@ Roles with app logins: **Owner + Staff (Manager, Accountant)**, secured by phone
 An unpaid org keeps **read access + free-vehicle writes**; paid-feature writes are rejected with `error.code = SUBSCRIPTION_REQUIRED` until the bKash webhook clears the invoice. **Never delete data.**
 
 ### 3.6 Multi-tenancy
-The **Owner account _is_ the tenant** (`organizationId`). Enforced in order of trust: (1) Postgres **Row-Level Security** as the backstop; (2) Prisma middleware/extension auto-injecting `organizationId`; (3) org-scoped composite uniqueness and org-first composite indexes.
+The **Owner account _is_ the tenant** (`organizationId`). Enforced (MySQL — no RLS): (1) **Prisma middleware/extension auto-injecting `organizationId` on every query — the primary and only backstop**; (2) org-scoped composite uniqueness and org-first composite indexes; (3) cross-tenant integration tests + a ban on raw queries that bypass the extension.
 
 ---
 
-## 4. Data Model (Prisma / PostgreSQL)
+## 4. Data Model (Prisma / MySQL)
 
-Production schema. Single database, shared schema, `organizationId` discriminator on every tenant-scoped table with `onDelete: Cascade`. Money is always `Decimal` with fixed scale — never floats. `LocationPing` is the only high-write time-series table (partition monthly / TimescaleDB in production).
+Production schema. **DB = MySQL/MariaDB** (InnoDB, utf8mb4). Single database, shared schema, `organizationId` discriminator on every tenant-scoped table with `onDelete: Cascade`. Money is always `Decimal` with fixed scale — never floats. **`LocationPing` is removed** (GPS comes from the owner's external GPS server API — no raw pings stored; keep only `Vehicle.gpsDeviceId`/`gpsProvider`). See the override banner at top and [07-decisions-and-deployment.md](07-decisions-and-deployment.md).
 
 ```prisma
 // ============================================================
 // datasource & generator
 // ============================================================
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"          // FINAL: MySQL/MariaDB (was "postgresql")
   url      = env("DATABASE_URL")
 }
 
@@ -1312,11 +1318,11 @@ model AuditLog {
 }
 ```
 
-### 4.1 Raw-migration constraints (Prisma can't express these)
-- **RLS backstop:** `USING (organization_id = current_setting('app.current_org')::text)` on every tenant table; app sets `SET app.current_org = $orgId` per request/transaction.
-- **Double-booking:** `EXCLUDE USING gist` on `bookings(vehicle_id WITH =, tstzrange(start_date_time, end_date_time) WITH &&)`.
-- **One active assignment per vehicle:** `CREATE UNIQUE INDEX ON driver_assignments(vehicle_id) WHERE end_date IS NULL`.
-- **`LocationPing`:** monthly range partitions on `recordedAt` (or TimescaleDB hypertable). `BigInt` PK is intentional.
+### 4.1 App-layer enforcement (MySQL — these Postgres tricks don't exist)
+- **Tenant isolation:** no RLS in MySQL → the **Prisma middleware auto-injecting `organizationId`** is the sole guard. No `SET app.current_org` / policy migration.
+- **Double-booking:** no `EXCLUDE USING gist` → in the booking service, a transaction + `SELECT … FOR UPDATE` on the vehicle's bookings rejects any `[start,end)` overlap for the same `vehicleId`.
+- **One active assignment per vehicle:** no partial unique index → app closes the prior open assignment (`endDate=null`) before opening a new one; regular index on `(vehicleId, endDate)`.
+- **`LocationPing`:** removed — GPS is external (owner's server API), no raw pings stored. See [07-decisions-and-deployment.md](07-decisions-and-deployment.md).
 
 ### 4.2 Cross-org global tables
 `SubscriptionPlan` (platform price book) and the marketplace moderation surface are platform-owned and deliberately carry **no** `organizationId`.
@@ -1617,14 +1623,14 @@ All accept `from`, `to`, `vehicle_id?`, `driver_id?`, `category?`, and `?format=
 | Backend framework | **NestJS (Node + TS)** | Module boundaries for a multi-tenant multi-module SaaS; DI for testability; `class-validator`; guards for role/tenant; free Swagger/OpenAPI → mobile contract. (Fastify + tsoa is the lighter alt.) |
 | API style | **REST** (not GraphQL) | Simpler for a low-literacy-market app; trivially cacheable; device/GPS webhooks & bKash callbacks are REST anyway |
 | ORM | **Prisma** | Already in stack; Prisma Migrate for evolution; drop to `$queryRaw` for ledger rollups & reporting |
-| Multi-tenancy | Single DB + mandatory `organizationId` + Prisma client extension auto-injecting tenant filter + **Postgres RLS** backstop | Never rely on devs remembering `where` |
+| Multi-tenancy | Single **MySQL** DB + mandatory `organizationId` + **Prisma client extension auto-injecting tenant filter (the ONLY backstop — MySQL has no RLS)** | Harden the extension; ban raw queries that skip it; cross-tenant integration tests |
 | Auth / OTP | Phone+OTP primary; PIN/password (Argon2) secondary; JWT access + rotating per-device refresh; roll-your-own OTP in Redis (6-digit hashed, TTL, attempt counter, rate limit) | Control Bengali SMS copy; cheaper than identity providers |
 | SMS gateway (BD) | **SSL Wireless** (bank-grade, branded sender) for OTP + billing; bulk alts (Reve, Alpha SMS, MIMSMS, bulksmsbd, greenweb) behind an `SmsProvider` interface with failover | Avoid Twilio (too expensive for BD OTP); deliverability is a churn driver |
 | Web frontend | **React + TS + Vite**, **TanStack Query**, **Tailwind + shadcn/ui**, **React Hook Form + Zod**, **ECharts/Recharts** | ECharts handles Bengali labels + large series; admin panel is a role-gated route-set |
 | Mobile | **React Native + Expo** (over Flutter) | Shares TS DTO types, Zod validation, business-rule utils across web/mobile/server; Expo OTA updates, EAS builds, push, camera/mic/location modules |
 | Bengali fonts | Bundle **Noto Sans Bengali / SolaimanLipi / Hind Siliguri** everywhere incl. PDFs | Don't trust device fonts; verify complex-script shaping on real low-end Android |
-| GPS ingestion | **Decoupled** Node/Fastify (or Go) service. Mode 1: pull/proxy Autonemo API. Mode 2: **Traccar** (open-source, 200+ protocols: GT06/JT808/Concox) for own devices | Different scaling profile — high-write, low-value-per-write time series |
-| GPS storage | **TimescaleDB** hypertable for `LocationPing` (Postgres extension) | Never put 10s pings in transactional tables |
+| GPS integration | **`GpsProvider` adapter** consuming the **owner's own GPS server API** (getLive/getBulk/getHistory). No self-hosted ingestion/Traccar needed. | Owner already runs a GPS platform — just consume it; swap adapter for other providers later |
+| GPS storage | **None** — no raw pings stored. `Vehicle.gpsDeviceId`/`gpsProvider` mapping in MySQL; live positions cached in **Redis** (short TTL). | No TimescaleDB; provider is the source of truth |
 | Live delivery | **WebSocket** (or MQTT via EMQX); stream consumer computes geofence/overspeed/ignition → `Alert` rows → push+SMS | App subscribes only to on-screen vehicles |
 | PDF/PNG | HTML template → **Puppeteer** or **Gotenberg** (Dockerized HTML→PDF) | Correct Bengali rendering where PDFKit struggles |
 | Excel | **ExcelJS** | Styled `.xlsx` |
@@ -1633,27 +1639,27 @@ All accept `from`, `to`, `vehicle_id?`, `driver_id?`, `category?`, and `?format=
 | Background jobs | **BullMQ** (Redis) repeatable/cron; worker as separate container | Reminders, SMS batches, monthly invoicing, reconciliation |
 | i18n | **i18next / react-i18next** (shared JSON web+mobile); centralize `Intl` `bn-BD` number/date formatter; ৳ BDT | Bengali-first from commit one; decide Bengali-numeral policy early |
 | Offline (mobile) | **WatermelonDB** (SQLite) or PowerSync/RxDB; client-UUID + version + sync queue; append-only ledger events; last-write-wins except money | Hardest correctness problem — design early |
-| Hosting | VPS in **Singapore** (DO SGP1 / AWS ap-southeast-1, ~30–60ms to BD); Docker Compose: API, GPS ingest, Postgres+Timescale, Redis, Gotenberg, Nginx/Caddy; **BunnyCDN/Cloudflare** front; nightly `pg_dump` + WAL to R2/B2 | Latency matters; start regional, add BD edge later; no Kubernetes early |
+| Hosting | **Contabo Cloud VPS 10 + CloudPanel, Singapore** (4 vCPU/8GB/75GB NVMe, ~30–60ms to BD). CloudPanel Node.js site (API) + static/Node site (web), **MySQL** via CloudPanel, Redis + Gotenberg (Docker) on box, BullMQ worker as separate PM2 process. Nightly `mysqldump` → R2/B2. Optional Cloudflare front. | Runs alongside existing static sites + VPN (~5.5GB RAM free); guide in 07 |
 
 ### 6.2 Architecture (in words)
 ```
 [RN/Expo App] ─┐                          ┌─ BullMQ Workers (SMS, PDF, invoices, reminders)
-[React Web]  ──┼─ REST API (NestJS) ──────┼─ Postgres + TimescaleDB (single tenant-scoped DB, RLS)
-[Admin panel]─┘        │  │  │             ├─ Redis (OTP, cache, queues)
+[React Web]  ──┼─ REST API (NestJS) ──────┼─ MySQL/MariaDB (single tenant-scoped DB, Prisma-middleware isolation)
+[Admin panel]─┘        │  │  │             ├─ Redis (OTP, cache, queues, GPS live cache)
                        │  │  └─ PaymentProvider → bKash PGW
                        │  └──── SmsProvider → SSL Wireless / fallback
-                       └─ WebSocket gateway (live positions/alerts)
-[GPS Devices] → Traccar / Autonemo API → GPS Ingestion svc → TimescaleDB → stream consumer (geofence/overspeed) → Alerts
+                       └─ WebSocket/poll gateway (live positions/alerts)
+[Owner's GPS server] ← GpsProvider adapter (getLive/getBulk/getHistory) ← REST API  (no raw-ping storage; Redis cache; alerts from provider or computed)
 [Gotenberg] ← PDF/PNG receipts → R2/B2 object storage → signed shareable links
 ```
 Everything tenant-scoped by `organizationId`. Ledger is append-only. NestJS modules map 1:1 to feature groups A–Q.
 
 ### 6.3 Risks to design around early (don't defer)
 1. **Offline sync correctness on money** — append-only ledger + client UUIDs from day one.
-2. **Multi-tenant isolation** — Prisma middleware **and** Postgres RLS.
+2. **Multi-tenant isolation** — Prisma middleware is the ONLY backstop (MySQL has no RLS); harden it + cross-tenant tests.
 3. **OTP deliverability** — dual SMS provider failover.
 4. **Bengali rendering everywhere incl. PDFs** — bundle fonts, test on real low-end Android.
-5. **GPS scaling** — separate service + TimescaleDB from the start.
+5. **GPS integration** — consume the owner's external GPS server via `GpsProvider` adapter; Redis-cache live positions; no raw pings in MySQL.
 
 ---
 
@@ -1722,7 +1728,7 @@ The freemium hook + daily operations for a single owner:
 - Push notifications (Expo). Harden offline sync across all entry types.
 
 ### Phase 3 — Platform + hardware + verticals (≈10–16 weeks, parallelizable)
-- **Live GPS:** Traccar/Autonemo ingestion, TimescaleDB, WebSocket live map (100+ vehicles, clustering), trip history/playback, geofence/overspeed/ignition alerts, tracker-to-vehicle mapping, hardware order flow (order→call→install→live, COD).
+- **Live GPS:** `GpsProvider` adapter over the owner's own GPS server API (no ingestion/TimescaleDB), Redis-cached live/bulk, WebSocket/poll live map (100+ vehicles, clustering), trip history/playback via provider, geofence/overspeed/ignition alerts (provider or computed), tracker-to-vehicle mapping, hardware order flow (order→call→install→live, COD).
 - **Inventory & parts:** stock, suppliers/credit, purchase/sale invoices, reorder & dead-stock reports.
 - Loans/installments/HP, party ledger (paona/dena/advance), charging-station module, bus-association fund/member/route accounting.
 - Auto marketplace with admin moderation.
@@ -1787,18 +1793,19 @@ P&L(vehicle)      = revenue − expenses
 - Reorder flag when `stock_quantity ≤ reorder_level`; slow-moving/dead stock reported. Supplier outstanding = credit purchases − payments made.
 
 ### 9.6 Rental
-- Double-booking prevented via a Postgres `EXCLUDE USING gist` range-overlap constraint (Prisma can't express it).
+- Double-booking prevented in the booking service (MySQL): transaction + `SELECT … FOR UPDATE` overlap check on the vehicle's bookings (no `EXCLUDE USING gist`).
 - `outstanding_due = total fare − (advance + payments)`. Hourly bill = `base_rate + hourly_rate×hours + surcharge` from START/END timestamps.
 
 ### 9.7 Party ledger (truck) & bus association
 - Party net = receivable (পাওনা) − settlements (পরিশোধ); advances (অগ্রিম) held separately, never conflated.
 - Member outstanding = subscription owed − amount paid; fund balance = total income − total expenses (per category); per-bus/per-route separate ledgers.
 
-### 9.8 GPS ingest
-- Live positions refresh every ~10s; dashboard scales to 100+ mixed vehicles.
-- Keep ingestion **decoupled** (separate service, TimescaleDB / monthly-partitioned `LocationPing`, `BigInt` PK). A stream consumer computes alerts:
-  - **Overspeed** on threshold; **Geofence** on enter/exit; **Ignition** on engine on/off.
-- Live delivery over WebSocket; app subscribes only to on-screen vehicles (throttle marker updates + clustering in RN).
+### 9.8 GPS (external provider)
+- GPS comes from the **owner's own GPS server API** via a `GpsProvider` adapter (`getLive`/`getBulk`/`getHistory`). No self-hosted ingestion, no TimescaleDB, no raw-ping storage.
+- Live positions fetched on demand and **cached in Redis** (short TTL ~5–10s) so the 100+-vehicle map doesn't hammer the provider; dashboard scales via `getBulk`.
+- **Alerts** (Overspeed / Geofence enter-exit / Ignition on-off): consume from the provider if it emits them; otherwise a BullMQ worker computes them from polled positions → `Alert` rows → push+SMS.
+- Live delivery to the app over WebSocket/poll; app subscribes only to on-screen vehicles (throttle marker updates + clustering in RN).
+- DB keeps only `Vehicle.gpsDeviceId` + `gpsProvider` mapping. Provider details/creds & adapter design → [07-decisions-and-deployment.md](07-decisions-and-deployment.md) §2.
 - `GpsTrip` summaries stay in the relational hot path; raw pings do not.
 
 ### 9.9 Offline-first (money correctness)
